@@ -13,9 +13,27 @@ from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
 from collections import defaultdict, deque
 from dataclasses import dataclass
+from datetime import datetime
 
-# Import shared types from agent module
-from .agent import AgentCommand, ExecutionResult
+# Local type definitions to avoid circular imports
+@dataclass
+class AgentCommand:
+    """Local definition to avoid circular import"""
+    text: str
+    timestamp: datetime
+    session_id: str
+    context: Dict[str, Any]
+    priority: str = "normal"
+
+@dataclass  
+class ExecutionResult:
+    """Local definition to avoid circular import"""
+    success: bool
+    message: str
+    data: Optional[Dict[str, Any]] = None
+    execution_time: float = 0.0
+    skills_used: Optional[List[str]] = None
+    errors: Optional[List[str]] = None
 
 # Import typing for type hints that don't cause circular imports
 from typing import TYPE_CHECKING
