@@ -1,0 +1,74 @@
+# Miktos AI Bridge Platform Release
+name: Release
+
+# GitHub Actions workflow for creating releases
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Create Release Archive
+      run: |
+        zip -r miktos-platform-${{ github.ref_name }}.zip \
+          core/ \
+          agent/ \
+          skills/ \
+          viewer/ \
+          workflows/ \
+          README.md \
+          LICENSE
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Miktos AI Bridge Platform ${{ github.ref_name }}
+        body: |
+          ## 🚀 Miktos AI Bridge Platform Release
+          
+          **AI-Powered Blender Automation Platform**
+          
+          This release includes the complete Miktos platform for intelligent Blender workflow automation through natural language commands.
+          
+          ### 🌟 Key Features
+          
+          - **🤖 Core Agent Engine**: Natural language to Blender Python API bridge
+          - **🧠 Learning System**: Continuously improving skill performance 
+          - **👁️ Real-time Viewer**: Live 3D preview with WebGL integration
+          - **📚 Skills Library**: 50+ expert-level Blender automation functions
+          - **🔄 Workflow Templates**: Pre-built automation sequences
+          
+          ### 📦 Installation
+          
+          1. Download `miktos-platform-${{ github.ref_name }}.zip`
+          2. Extract to your workspace directory
+          3. Install Python dependencies: `pip install -r requirements.txt`
+          4. Install Node.js dependencies: `npm install`
+          5. Follow the setup guide in `docs/GETTING_STARTED.md`
+          
+          ### 🛠️ Components Included
+          
+          - **Core Engine**: AI bridge and natural language processing
+          - **Agent Framework**: Blender automation and safety systems
+          - **Skills Library**: Professional 3D automation functions  
+          - **Real-time Viewer**: WebGL-based 3D preview system
+          - **Workflow Templates**: Ready-to-use automation sequences
+          
+          ### 📖 Documentation
+          
+          - [Installation Guide](docs/INSTALLATION.md)
+          - [API Reference](docs/API.md)  
+          - [Skills Development](docs/SKILLS_DEVELOPMENT.md)
+          - [Architecture Overview](docs/ARCHITECTURE.md)
+          
+          **Local-First Processing** • **Expert-Level Integration** • **Intelligent Learning**
+        files: |
+          miktos-platform-${{ github.ref_name }}.zip
+        draft: false
+        prerelease: false

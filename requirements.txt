@@ -1,0 +1,77 @@
+# Miktos AI Bridge Platform - Python Dependencies
+
+# Core Dependencies
+asyncio-mqtt>=0.11.1
+pyyaml>=6.0
+python-dotenv>=0.19.0
+
+# Natural Language Processing
+spacy>=3.4.0
+transformers>=4.21.0
+torch>=1.12.0
+sentence-transformers>=2.2.0
+nltk>=3.7
+
+# Machine Learning & AI
+scikit-learn>=1.1.0
+numpy>=1.21.0
+pandas>=1.4.0
+
+# Web and Communication
+websockets>=10.3
+fastapi>=0.78.0
+uvicorn>=0.18.0
+requests>=2.28.0
+httpx>=0.23.0
+
+# Computer Graphics & 3D
+moderngl>=5.6.0
+PyOpenGL>=3.1.6
+Pillow>=9.2.0
+opencv-python>=4.6.0
+
+# Blender Python API (for external scripts)
+bpy>=3.2.0  # Note: This may need to be installed separately
+
+# Development & Testing
+pytest>=7.1.0
+pytest-asyncio>=0.19.0
+black>=22.6.0
+mypy>=0.971
+flake8>=5.0.0
+pre-commit>=2.20.0
+
+# Logging & Monitoring
+structlog>=22.1.0
+prometheus-client>=0.14.0
+
+# Data Processing
+jsonschema>=4.7.0
+msgpack>=1.0.4
+
+# Optional: GPU acceleration
+# torch-audio>=0.12.0  # Uncomment if needed
+# torchaudio>=0.12.0   # Uncomment if needed
+
+# Platform-specific dependencies
+# Windows
+# pywin32>=304  # Uncomment on Windows
+
+# macOS specific
+# pyobjc-framework-Cocoa>=8.5  # Uncomment on macOS for native integration
+
+# Development extras
+jupyter>=1.0.0
+matplotlib>=3.5.0
+plotly>=5.9.0
+
+# Performance optimization
+cython>=0.29.0
+numba>=0.56.0
+
+# Security
+cryptography>=37.0.0
+
+# Configuration management
+hydra-core>=1.2.0
+omegaconf>=2.2.0

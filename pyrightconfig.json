@@ -1,0 +1,51 @@
+{
+    "include": [
+        "core",
+        "agent", 
+        "skills",
+        "viewer",
+        "main.py",
+        "setup.py"
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        ".git",
+        ".venv",
+        "venv",
+        "build",
+        "dist"
+    ],
+    "stubPath": "stubs",
+    "venvPath": ".",
+    "venv": ".venv",
+    "pythonVersion": "3.8",
+    "pythonPlatform": "All",
+    "typeCheckingMode": "basic",
+    "useLibraryCodeForTypes": true,
+    "autoImportCompletions": true,
+    "autoSearchPaths": true,
+    "extraPaths": [
+        "."
+    ],
+    "reportMissingImports": "none",
+    "reportMissingTypeStubs": "none",
+    "reportImportCycles": "error",
+    "reportUnusedImport": "warning",
+    "reportUnusedClass": "none",
+    "reportUnusedFunction": "none",
+    "reportUnusedVariable": "warning",
+    "reportDuplicateImport": "warning",
+    "reportOptionalSubscript": "warning",
+    "reportOptionalMemberAccess": "warning",
+    "reportOptionalCall": "warning",
+    "reportOptionalIterable": "warning",
+    "reportOptionalContextManager": "warning",
+    "reportOptionalOperand": "warning",
+    "reportTypedDictNotRequiredAccess": "warning",
+    "reportPrivateImportUsage": "warning",
+    "reportConstantRedefinition": "error",
+    "reportIncompatibleMethodOverride": "error",
+    "reportIncompatibleVariableOverride": "error",
+    "reportOverlappingOverloads": "error"
+}

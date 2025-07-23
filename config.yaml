@@ -1,0 +1,251 @@
+# Miktos AI Bridge Platform Configuration
+
+# Core Platform Settings
+platform:
+  name: "Miktos AI Bridge"
+  version: "1.0.0"
+  debug: false
+  environment: "development"
+
+# AI Agent Configuration
+agent:
+  # Natural Language Processing
+  nlp:
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    context_window: 5
+    fallback_enabled: true
+    cache_embeddings: true
+    
+  # Command Parser
+  parser:
+    max_complexity: 0.8
+    safety_checks: true
+    intent_confidence_threshold: 0.6
+    parameter_validation: true
+    
+  # Safety Manager
+  safety:
+    validation_level: "normal"  # low, normal, high, strict
+    rollback_enabled: true
+    max_operations_per_command: 10
+    destructive_operations_require_confirmation: true
+    backup_before_major_changes: true
+    
+  # Learning Engine
+  learning:
+    track_performance: true
+    optimize_skills: true
+    community_data: false  # Anonymous usage statistics
+    learning_rate: 0.1
+    performance_history_length: 100
+
+# Blender Integration
+blender:
+  # Installation paths (auto-detected if not specified)
+  path: "/Applications/Blender.app"  # macOS default
+  # path: "C:\\Program Files\\Blender Foundation\\Blender 3.6"  # Windows
+  # path: "/usr/bin/blender"  # Linux
+  
+  python_path: null  # Auto-detected from Blender installation
+  
+  # Communication settings
+  socket_port: 8089
+  startup_timeout: 30.0
+  operation_timeout: 60.0
+  
+  # Scene management
+  auto_save: true
+  backup_interval: 300  # seconds
+  max_backups: 10
+  startup_blend: "templates/default_scene.blend"
+  
+  # Performance settings
+  memory_limit_mb: 2048
+  cpu_cores: null  # Auto-detect
+
+# Skills Library Configuration
+skills:
+  # Execution settings
+  max_skills_per_command: 3
+  skill_timeout: 30.0
+  parallel_execution: false
+  cache_skills: true
+  
+  # Skill discovery
+  auto_load_custom_skills: true
+  custom_skills_directory: "custom_skills/"
+  
+  # Performance tracking
+  track_usage_statistics: true
+  optimize_frequently_used: true
+  skill_complexity_weighting: true
+
+# Real-time 3D Viewer
+viewer:
+  enabled: true
+  auto_start: true
+  
+  # Server settings
+  port: 8080
+  host: "localhost"
+  
+  # Rendering settings
+  resolution: [1920, 1080]
+  fps_target: 60
+  quality: "high"  # low, medium, high, ultra
+  
+  # Viewport settings
+  default_camera_position: [5, 5, 5]
+  default_camera_target: [0, 0, 0]
+  default_viewport_mode: "perspective"
+  
+  # Performance settings
+  max_polygons: 1000000
+  texture_resolution_limit: 2048
+  enable_shadows: true
+  enable_reflections: true
+  anti_aliasing: "MSAA_4x"
+  
+  # Client settings
+  max_clients: 10
+  client_timeout: 300  # seconds
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "logs/miktos.log"
+  max_size_mb: 50
+  backup_count: 10
+  
+  # Component-specific logging
+  components:
+    agent: "INFO"
+    blender_bridge: "DEBUG"
+    skills_manager: "INFO"
+    viewer: "INFO"
+    nlp_processor: "DEBUG"
+  
+  # Log formatting
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  date_format: "%Y-%m-%d %H:%M:%S"
+
+# Performance Monitoring
+monitoring:
+  enabled: false
+  metrics_port: 9090
+  
+  # Metrics to track
+  track_command_latency: true
+  track_skill_performance: true
+  track_viewer_fps: true
+  track_memory_usage: true
+  
+  # Alerting (optional)
+  alert_on_errors: false
+  alert_email: null
+
+# Security Settings
+security:
+  # API security
+  require_api_key: false
+  api_key: null
+  
+  # File system access
+  restricted_directories: []
+  allow_system_commands: false
+  
+  # Network security
+  allow_external_connections: false
+  cors_origins: ["http://localhost:3000", "http://localhost:8080"]
+
+# Development Settings (only in development mode)
+development:
+  hot_reload: true
+  debug_ui: true
+  enable_profiling: false
+  mock_blender: false  # Use mock Blender for testing
+  
+  # Testing settings
+  test_data_directory: "tests/data/"
+  generate_test_reports: true
+
+# Production Settings (only in production mode)
+production:
+  error_reporting: true
+  telemetry: false
+  auto_updates: true
+  
+  # Performance optimization
+  preload_skills: true
+  optimize_memory: true
+  cpu_priority: "normal"
+
+# Cloud Integration (optional)
+cloud:
+  enabled: false
+  
+  # Sync settings
+  sync_projects: false
+  sync_skills: false
+  sync_preferences: false
+  
+  # API endpoints
+  api_base_url: "https://api.miktos.ai"
+  cdn_base_url: "https://cdn.miktos.ai"
+  
+  # Authentication
+  user_token: null
+  refresh_token: null
+
+# User Preferences
+user:
+  # Interface preferences
+  theme: "dark"  # light, dark, auto
+  language: "en"
+  
+  # Workflow preferences
+  auto_save_frequency: 300  # seconds
+  show_advanced_options: false
+  confirm_destructive_operations: true
+  
+  # Skill preferences
+  preferred_skill_complexity: "medium"  # low, medium, high
+  enable_skill_suggestions: true
+  
+  # Viewer preferences
+  default_shading_mode: "material"  # wireframe, solid, material, rendered
+  show_grid: true
+  show_axis: true
+  
+# Template configurations for different use cases
+templates:
+  # Modeling workflow
+  modeling:
+    viewer:
+      quality: "high"
+      enable_wireframe_overlay: true
+    skills:
+      max_skills_per_command: 5
+      prefer_simple_operations: true
+  
+  # Animation workflow  
+  animation:
+    viewer:
+      fps_target: 24
+      enable_motion_blur: true
+    blender:
+      memory_limit_mb: 4096
+  
+  # Rendering workflow
+  rendering:
+    viewer:
+      quality: "ultra"
+      enable_gpu_acceleration: true
+    blender:
+      cpu_cores: -1  # Use all cores
+
+# Extensions and plugins
+extensions:
+  enabled: []  # List of enabled extension names
+  directory: "extensions/"
+  auto_load: false
