@@ -15,8 +15,8 @@ from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..core.nlp_processor import NLPIntent  # type: ignore
-from ..agent.blender_bridge import BlenderOperation, ExecutionPlan  # type: ignore
+from core.nlp_processor import NLPIntent  # type: ignore
+from agent.blender_bridge import BlenderOperation, ExecutionPlan  # type: ignore
 
 
 @dataclass

@@ -37,6 +37,19 @@ class ValidationResult:
             self.corrected_parameters = {}
 
 
+@dataclass
+class ParameterConfig:
+    """Configuration for parameter validation."""
+    name: str
+    parameter_type: type
+    required: bool = True
+    default_value: Any = None
+    min_value: Optional[Union[int, float]] = None
+    max_value: Optional[Union[int, float]] = None
+    valid_values: Optional[List[Any]] = None
+    description: str = ""
+
+
 class OperationValidator:
     """
     Validates 3D operations before execution.

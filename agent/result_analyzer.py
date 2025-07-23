@@ -62,6 +62,17 @@ class AnalysisInsight:
     suggestions: List[str] = field(default_factory=list)
 
 
+@dataclass
+class AnalysisResult:
+    """Comprehensive analysis result for operation."""
+    operation: str
+    status: ResultStatus
+    insights: List[AnalysisInsight] = field(default_factory=list)
+    performance_score: float = 0.0
+    recommendations: List[str] = field(default_factory=list)
+    overall_assessment: str = ""
+
+
 class ResultAnalyzer:
     """
     Analyzes operation results to provide insights and feedback.

@@ -5,8 +5,8 @@ Expert-level skills for creating and configuring primitive objects
 """
 
 from typing import Dict, List, Any, Optional
-from ..skill_manager import miktos_skill
-from ...agent.blender_bridge import BlenderOperation  # type: ignore
+from skills.skill_manager import miktos_skill  # type: ignore
+from agent.blender_bridge import BlenderOperation  # type: ignore
 
 
 @miktos_skill(

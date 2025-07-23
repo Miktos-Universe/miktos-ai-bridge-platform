@@ -16,8 +16,8 @@ from .nlp_processor import NLPProcessor  # type: ignore
 from .command_parser import CommandParser  # type: ignore
 from .safety_manager import SafetyManager  # type: ignore
 from .learning_engine import LearningEngine  # type: ignore
-from ..agent.blender_bridge import BlenderBridge  # type: ignore
-from ..skills.skill_manager import SkillManager  # type: ignore
+from agent.blender_bridge import BlenderBridge  # type: ignore
+from skills.skill_manager import SkillManager  # type: ignore
 
 
 @dataclass

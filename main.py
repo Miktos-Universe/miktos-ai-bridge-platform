@@ -124,6 +124,10 @@ class MiktosPlatform:
         log_level = getattr(logging, log_config.get('level', 'INFO'))
         log_file = log_config.get('file', 'miktos.log')
         
+        # Ensure log directory exists
+        log_path = Path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        
         # Create formatters
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
