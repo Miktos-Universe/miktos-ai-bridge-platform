@@ -1,0 +1,158 @@
+name: Workflow Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install jsonschema pyyaml
+    
+    - name: Validate JSON workflows
+      run: |
+        find . -name "*.json" -type f | while read file; do
+          echo "Validating $file"
+          python -c "
+          import json
+          import sys
+          try:
+              with open('$file', 'r') as f:
+                  json.load(f)
+              print('✓ Valid JSON: $file')
+          except json.JSONDecodeError as e:
+              print('✗ Invalid JSON: $file - ' + str(e))
+              sys.exit(1)
+          "
+        done
+    
+    - name: Check workflow structure
+      run: |
+        python -c "
+        import os
+        import json
+        
+        def check_workflow_structure(workflow_dir):
+            required_files = ['workflow.json', 'README.md']
+            missing_files = []
+            
+            for required_file in required_files:
+                file_path = os.path.join(workflow_dir, required_file)
+                if not os.path.exists(file_path):
+                    missing_files.append(required_file)
+            
+            if missing_files:
+                print(f'Missing files in {workflow_dir}: {missing_files}')
+                return False
+            return True
+        
+        valid = True
+        for root, dirs, files in os.walk('./workflows'):
+            if 'workflow.json' in files:
+                if not check_workflow_structure(root):
+                    valid = False
+        
+        if not valid:
+            exit(1)
+        else:
+            print('All workflow structures are valid')
+        "
+    
+    - name: Validate metadata files
+      run: |
+        find . -name "metadata.json" -type f | while read file; do
+          echo "Validating metadata: $file"
+          python -c "
+          import json
+          import sys
+          
+          required_fields = ['name', 'description', 'category', 'version']
+          
+          try:
+              with open('$file', 'r') as f:
+                  metadata = json.load(f)
+              
+              missing_fields = []
+              for field in required_fields:
+                  if field not in metadata:
+                      missing_fields.append(field)
+              
+              if missing_fields:
+                  print('Missing required fields in $file: ' + ', '.join(missing_fields))
+                  sys.exit(1)
+              else:
+                  print('✓ Valid metadata: $file')
+          except json.JSONDecodeError as e:
+              print('✗ Invalid JSON in metadata: $file - ' + str(e))
+              sys.exit(1)
+          "
+        done
+    
+    - name: Check for duplicate workflow names
+      run: |
+        python -c "
+        import json
+        import os
+        
+        names = []
+        duplicates = []
+        
+        for root, dirs, files in os.walk('./workflows'):
+            if 'metadata.json' in files:
+                with open(os.path.join(root, 'metadata.json'), 'r') as f:
+                    metadata = json.load(f)
+                    name = metadata.get('name', '')
+                    if name in names:
+                        duplicates.append(name)
+                    else:
+                        names.append(name)
+        
+        if duplicates:
+            print('Duplicate workflow names found: ' + ', '.join(duplicates))
+            exit(1)
+        else:
+            print('No duplicate workflow names found')
+        "
+
+  markdown-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Lint Markdown files
+      uses: articulate/actions-markdownlint@v1
+      with:
+        config: .markdownlint.json
+        files: '**/*.md'
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check for sensitive data
+      run: |
+        # Check for potential API keys, passwords, etc.
+        if grep -r -i "api.key\|password\|secret\|token" --include="*.json" --include="*.md" .; then
+          echo "Potential sensitive data found. Please review:"
+          grep -r -i "api.key\|password\|secret\|token" --include="*.json" --include="*.md" .
+          exit 1
+        else
+          echo "No sensitive data patterns found"
+        fi
