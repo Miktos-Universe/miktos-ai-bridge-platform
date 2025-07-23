@@ -636,3 +636,16 @@ class ViewportManager:
                 for viewport_id, viewport in self.viewports.items()
             }
         }
+
+    async def stop(self):
+        """Stop the viewport manager and cleanup resources."""
+        self.logger.info("Stopping viewport manager...")
+        
+        # Reset viewports
+        self.viewports.clear()
+        self.active_viewport = None
+        
+        # Reset layout
+        self.layout_mode = "single"
+        
+        self.logger.info("Viewport manager stopped")

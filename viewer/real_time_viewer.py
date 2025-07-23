@@ -90,7 +90,7 @@ class RealTimeViewer:
         """Start the real-time viewer"""
         try:
             # Initialize renderer
-            await self.webgl_renderer.initialize(self.resolution, self.quality)
+            await self.webgl_renderer.initialize()
             
             # Start scene synchronization
             await self.scene_sync.start()
@@ -120,7 +120,7 @@ class RealTimeViewer:
         self.viewer_state.is_active = False
         
         # Stop components
-        await self.scene_sync.stop()
+        await self.scene_sync.stop_sync()
         await self.viewport_manager.stop()
         await self.webgl_renderer.cleanup()
         

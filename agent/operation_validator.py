@@ -188,13 +188,32 @@ class OperationValidator:
     
     def _is_valid_operation(self, operation: str) -> bool:
         """Check if operation name is valid."""
-        # Define valid operations
+        # Define valid operations based on available skills
         valid_operations = {
+            # Basic operation types (for generic validation)
+            'create', 'modify', 'delete', 'select', 'status',
+            
+            # Primitive creation operations
             'create_cube', 'create_sphere', 'create_cylinder', 'create_cone',
             'create_torus', 'create_plane', 'create_circle', 'create_monkey',
+            'create_ico_sphere', 'create_uv_sphere',
+            
+            # Object manipulation operations
             'delete_object', 'duplicate_object', 'scale_object', 'move_object',
-            'rotate_object', 'apply_material', 'add_modifier', 'subdivide',
-            'extrude', 'inset', 'bevel', 'array', 'mirror', 'solidify'
+            'rotate_object', 'select_object', 'deselect_object',
+            
+            # Material operations
+            'apply_material', 'create_material', 'assign_material',
+            
+            # Modifier operations
+            'add_modifier', 'subdivide', 'extrude', 'inset', 'bevel', 
+            'array', 'mirror', 'solidify', 'smooth', 'shade_flat',
+            
+            # Camera and lighting
+            'add_light', 'set_camera', 'frame_selected',
+            
+            # Scene operations
+            'clear_scene', 'save_scene', 'export_scene'
         }
         
         return operation in valid_operations
@@ -531,6 +550,64 @@ class OperationValidator:
         
         return ValidationResult(is_valid=True, severity=ValidationSeverity.INFO, message="Object name is valid")
     
+    async def validate_plan(self, plan) -> ValidationResult:
+        """
+        Validate an execution plan containing multiple operations.
+        
+        Args:
+            plan: ExecutionPlan object or dict with operations and parameters
+            
+        Returns:
+            ValidationResult: Overall validation result
+        """
+        try:
+            # Handle both ExecutionPlan objects and dictionaries
+            if hasattr(plan, 'operations'):
+                operations = plan.operations
+            else:
+                operations = plan.get('operations', [])
+            
+            if not operations:
+                return ValidationResult(
+                    is_valid=False,
+                    severity=ValidationSeverity.ERROR,
+                    message="Plan contains no operations"
+                )
+            
+            # Validate each operation in the plan
+            for i, operation_data in enumerate(operations):
+                if hasattr(operation_data, 'operation_type'):
+                    # BlenderOperation object
+                    operation = operation_data.operation_type
+                    parameters = operation_data.parameters or {}
+                else:
+                    # Dictionary format
+                    operation = operation_data.get('operation', '')
+                    parameters = operation_data.get('parameters', {})
+                
+                result = await self.validate_operation(operation, parameters)
+                if not result.is_valid and result.severity == ValidationSeverity.ERROR:
+                    return ValidationResult(
+                        is_valid=False,
+                        severity=result.severity,
+                        message=f"Operation {i+1} validation failed: {result.message}",
+                        suggestions=result.suggestions
+                    )
+            
+            return ValidationResult(
+                is_valid=True,
+                severity=ValidationSeverity.INFO,
+                message="Plan validation successful"
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Plan validation error: {e}")
+            return ValidationResult(
+                is_valid=False,
+                severity=ValidationSeverity.ERROR,
+                message=f"Plan validation failed: {str(e)}"
+            )
+
     def get_parameter_suggestions(self, operation: str) -> Dict[str, str]:
         """Get parameter suggestions for an operation."""
         suggestions = {}

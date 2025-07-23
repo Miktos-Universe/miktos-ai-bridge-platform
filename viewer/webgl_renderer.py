@@ -119,6 +119,29 @@ class WebGLRenderer:
         
         # Initialize default scene
         self._setup_default_scene()
+
+    async def initialize(self) -> bool:
+        """Initialize the WebGL renderer."""
+        try:
+            self.logger.info("Initializing WebGL renderer...")
+            
+            # Setup rendering context
+            self.is_rendering = True
+            
+            # Reset performance stats
+            self.performance_stats = {
+                'fps': 0.0,
+                'frame_time_ms': 0.0,
+                'object_count': 0,
+                'triangle_count': 0
+            }
+            
+            self.logger.info("WebGL renderer initialized successfully")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize WebGL renderer: {e}")
+            return False
     
     def _setup_default_scene(self):
         """Setup default scene with basic lighting and materials."""
@@ -587,3 +610,25 @@ class WebGLRenderer:
             } for light in self.lights],
             "performance": self.performance_stats
         }
+
+    async def cleanup(self):
+        """Cleanup WebGL renderer and free resources."""
+        self.logger.info("Cleaning up WebGL renderer...")
+        
+        # Clear scene data
+        self.objects.clear()
+        self.materials.clear()
+        self.lights.clear()
+        
+        # Reset settings
+        self._setup_default_scene()
+        
+        # Reset performance stats
+        self.performance_stats = {
+            "frames_rendered": 0,
+            "triangles_rendered": 0,
+            "draw_calls": 0,
+            "avg_frame_time": 0.0
+        }
+        
+        self.logger.info("WebGL renderer cleanup complete")

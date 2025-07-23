@@ -148,8 +148,8 @@ class BlenderBridge:
             if not validation_result.is_valid:
                 return BlenderResult(
                     success=False,
-                    message=f"Plan validation failed: {validation_result.reason}",
-                    errors=[validation_result.reason]
+                    message=f"Plan validation failed: {validation_result.message}",
+                    errors=[validation_result.message]
                 )
             
             # Execute operations in sequence

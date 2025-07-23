@@ -94,6 +94,9 @@ class NLPProcessor:
             'create': [
                 r'\b(create|add|make|generate|build|spawn)\b',
                 r'\bnew\s+(\w+)',
+                # Handle simple commands like "cube", "sphere"
+                r'^(cube|sphere|cylinder|cone|torus|plane|circle|monkey)$',
+                r'^create_(\w+)$',
             ],
             'modify': [
                 r'\b(modify|change|alter|edit|update|adjust)\b',
@@ -119,6 +122,10 @@ class NLPProcessor:
             ],
             'animation': [
                 r'\b(animate|keyframe|timeline)\b',
+            ],
+            'status': [
+                r'^status$',
+                r'\b(status|state|info|information)\b',
             ]
         }
         
@@ -290,6 +297,39 @@ class NLPProcessor:
     
     def _create_intent_from_action(self, action: str, text: str, entities: Dict[str, List[str]]) -> Optional[NLPIntent]:
         """Create intent from identified action"""
+        
+        # Handle special cases for simple commands
+        text_lower = text.lower().strip()
+        
+        # Direct operation name mapping
+        if text_lower.startswith('create_'):
+            operation_name = text_lower
+            object_type = text_lower.replace('create_', '')
+            return NLPIntent(
+                action="create",
+                target=object_type,
+                parameters={"operation": operation_name},
+                confidence=0.9
+            )
+        
+        # Simple object creation commands
+        simple_objects = ['cube', 'sphere', 'cylinder', 'cone', 'torus', 'plane', 'circle', 'monkey']
+        if text_lower in simple_objects:
+            return NLPIntent(
+                action="create",
+                target=text_lower,
+                parameters={"operation": f"create_{text_lower}"},
+                confidence=0.9
+            )
+        
+        # Status command
+        if text_lower == 'status':
+            return NLPIntent(
+                action="status",
+                target="platform",
+                parameters={},
+                confidence=1.0
+            )
         
         # Determine target
         target = "object"  # default
