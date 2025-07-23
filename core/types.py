@@ -19,6 +19,12 @@ class NLPIntent:
     parameters: Dict[str, Any]
     confidence: float
     context_references: Optional[List[str]] = None
+    
+    # Alternative naming for compatibility
+    intent_name: Optional[str] = None
+    entities: Optional[Dict[str, Any]] = None
+    context: Optional[Dict[str, Any]] = None
+    complexity_score: float = 0.5
 
 
 @dataclass
@@ -30,6 +36,12 @@ class NLPResult:
     context: Dict[str, Any]
     processed_text: str
     suggestions: Optional[List[str]] = None
+    
+    # Additional fields for compatibility
+    original_text: str = ""
+    intents: Optional[List[Any]] = None  # For backward compatibility
+    suggested_skills: Optional[List[str]] = None
+    complexity_score: float = 0.5
 
 
 @dataclass
@@ -40,6 +52,11 @@ class ParsedParameter:
     param_type: str
     confidence: float
     source_text: str
+    
+    # Additional fields for compatibility
+    data_type: Optional[str] = None
+    validation_status: str = "valid"
+    context_references: Optional[List[str]] = None
 
 
 @dataclass 
@@ -53,6 +70,14 @@ class ParsedCommand:
     estimated_time: float
     context: Dict[str, Any]
     nlp_result: 'NLPResult'
+    
+    # Additional fields for compatibility with different modules
+    primary_intent: Optional[str] = None
+    target_object: Optional[str] = None
+    intents: Optional[List['NLPIntent']] = None
+    required_skills: Optional[List[str]] = None
+    dependencies: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 @dataclass

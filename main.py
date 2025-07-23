@@ -294,7 +294,8 @@ class MiktosPlatform:
     async def take_screenshot(self) -> str:
         """Take a screenshot of the current 3D view"""
         if self.viewer:
-            return await self.viewer.take_screenshot()
+            screenshot = await self.viewer.take_screenshot()
+            return screenshot or ""
         return ""
     
     async def set_viewer_camera(self, position: List[float], target: List[float]):

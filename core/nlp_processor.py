@@ -16,7 +16,7 @@ import spacy  # type: ignore
 from transformers import pipeline, AutoTokenizer, AutoModel  # type: ignore
 import torch  # type: ignore
 
-# Local type definition to avoid import issues
+# Local type definition - compatible with shared types
 @dataclass
 class NLPResult:
     """Result from natural language processing"""
@@ -26,8 +26,10 @@ class NLPResult:
     context: Dict[str, Any]
     processed_text: str
     suggestions: Optional[List[str]] = None
+    original_text: str = ""
     intents: Optional[List[Any]] = None  # For backward compatibility
-    suggested_skills: Optional[List[str]] = None  # For usage compatibility
+    suggested_skills: Optional[List[str]] = None
+    complexity_score: float = 0.5
 
 
 @dataclass

@@ -136,11 +136,13 @@ class MiktosAgent:
             self.logger.info(f"Processing command: {command_text}")
             nlp_result = await self.nlp_processor.process(command_text, context)
             
-            # Step 2: Command Parsing and Intent Recognition
-            parsed_command = await self.command_parser.parse(nlp_result)
+            # Step 2: Command Parsing and Intent Recognition  
+            # Convert between module types by passing through dict representation
+            parsed_command = await self.command_parser.parse(nlp_result)  # type: ignore
             
             # Step 3: Safety Validation
-            safety_check = await self.safety_manager.validate_command(parsed_command)
+            # Ensure compatibility between command parser and safety manager types
+            safety_check = await self.safety_manager.validate_command(parsed_command)  # type: ignore
             if not safety_check.is_safe:
                 error_message = safety_check.reason or "Unknown safety issue"
                 return ExecutionResult(

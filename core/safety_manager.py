@@ -14,16 +14,18 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
-
-# Import type definitions from command_parser
+# Local type definitions compatible with command_parser
 @dataclass
 class ParsedParameter:
     """Represents a parsed parameter with validation info"""
     name: str
     value: Any
-    data_type: str
+    param_type: str  # Use param_type to match command_parser
     confidence: float
-    validation_status: str = "valid"  # valid, invalid, needs_validation
+    source_text: str = ""
+    data_type: Optional[str] = None  # Keep for backward compatibility
+    validation_status: str = "valid"
+    context_references: Optional[List[str]] = None
 
 
 @dataclass
@@ -38,15 +40,21 @@ class NLPIntent:
 
 @dataclass
 class ParsedCommand:
-    """Represents a fully parsed command ready for execution"""
+    """Represents a fully parsed command - compatible with command_parser.ParsedCommand"""
     original_text: str
-    primary_intent: str
-    target_object: str
-    parameters: Dict[str, ParsedParameter]
-    intents: List[NLPIntent]
+    intent: str
+    parameters: List[ParsedParameter]
     confidence: float
     execution_complexity: float
-    required_skills: List[str]
+    estimated_time: float = 0.0
+    context: Optional[Dict[str, Any]] = None
+    nlp_result: Any = None
+    
+    # Fields expected by safety_manager
+    primary_intent: Optional[str] = None
+    target_object: Optional[str] = None
+    intents: Optional[List[NLPIntent]] = None
+    required_skills: Optional[List[str]] = None
     dependencies: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
 
@@ -133,6 +141,30 @@ class SafetyManager:
         
         # Parameter limits
         self.parameter_limits = self._init_parameter_limits()
+    
+    def _get_parameters_dict(self, parsed_command: ParsedCommand) -> Dict[str, ParsedParameter]:
+        """Convert parameters list to dict for compatibility"""
+        if isinstance(parsed_command.parameters, list):
+            return {param.name: param for param in parsed_command.parameters}
+        elif isinstance(parsed_command.parameters, dict):
+            return parsed_command.parameters
+        else:
+            return {}
+    
+    def _get_primary_intent(self, parsed_command: ParsedCommand) -> str:
+        """Get primary intent with fallback"""
+        if parsed_command.primary_intent:
+            return parsed_command.primary_intent
+        elif parsed_command.intent:
+            return parsed_command.intent
+        else:
+            return "unknown"
+    
+    def _get_required_skills_count(self, parsed_command: ParsedCommand) -> int:
+        """Get required skills count safely"""
+        if parsed_command.required_skills:
+            return len(parsed_command.required_skills)
+        return 0
     
     def _init_safety_rules(self) -> List[SafetyRule]:
         """Initialize safety validation rules"""
@@ -342,7 +374,7 @@ class SafetyManager:
     
     def _determine_operation_type(self, parsed_command: ParsedCommand) -> OperationType:
         """Determine the type of operation for safety classification"""
-        intent = parsed_command.primary_intent.lower()
+        intent = self._get_primary_intent(parsed_command).lower()
         
         if 'delete' in intent or 'remove' in intent or 'clear' in intent:
             return OperationType.DELETE
@@ -358,7 +390,7 @@ class SafetyManager:
     def _is_blacklisted_operation(self, parsed_command: ParsedCommand) -> bool:
         """Check if operation is blacklisted"""
         for blacklisted in self.blacklisted_operations:
-            if blacklisted.lower() in parsed_command.primary_intent.lower():
+            if blacklisted.lower() in self._get_primary_intent(parsed_command).lower():
                 return True
             if blacklisted.lower() in parsed_command.original_text.lower():
                 return True
@@ -416,7 +448,7 @@ class SafetyManager:
         """Validate parameter ranges against safety limits"""
         violations = []
         
-        for param_name, param in parsed_command.parameters.items():
+        for param_name, param in self._get_parameters_dict(parsed_command).items():
             if param.data_type == 'numeric':
                 # Check if parameter has defined limits
                 for limit_name, limits in self.parameter_limits.items():
@@ -451,7 +483,7 @@ class SafetyManager:
         max_objects = (rule.parameters or {}).get('max_objects_per_operation', 100)
         
         # Check for array/duplicate operations
-        for param_name, param in parsed_command.parameters.items():
+        for param_name, param in self._get_parameters_dict(parsed_command).items():
             if 'count' in param_name.lower() or 'array' in param_name.lower():
                 if param.data_type == 'numeric' and param.value > max_objects:
                     violations.append(SafetyViolation(
@@ -489,7 +521,7 @@ class SafetyManager:
         
         max_subdivisions = (rule.parameters or {}).get('max_subdivisions', 6)
         
-        for param_name, param in parsed_command.parameters.items():
+        for param_name, param in self._get_parameters_dict(parsed_command).items():
             if 'subdivision' in param_name.lower() and param.data_type == 'numeric':
                 if param.value > max_subdivisions:
                     violations.append(SafetyViolation(
@@ -531,7 +563,7 @@ class SafetyManager:
         max_frames = (rule.parameters or {}).get('max_frames', 10000)
         
         # Check for frame-related parameters
-        for param_name, param in parsed_command.parameters.items():
+        for param_name, param in self._get_parameters_dict(parsed_command).items():
             if 'frame' in param_name.lower() and param.data_type == 'numeric':
                 if param.value > max_frames:
                     violations.append(SafetyViolation(
@@ -560,11 +592,12 @@ class SafetyManager:
             ))
         
         # Check number of operations
-        if len(parsed_command.required_skills) > self.max_operations_per_command:
+        required_skills_count = self._get_required_skills_count(parsed_command)
+        if required_skills_count > self.max_operations_per_command:
             violations.append(SafetyViolation(
                 rule_name="operation_count_limit",
                 severity="error",
-                message=f"Too many operations required: {len(parsed_command.required_skills)}",
+                message=f"Too many operations required: {required_skills_count}",
                 suggested_fix=f"Limit to {self.max_operations_per_command} operations per command",
                 auto_fixable=False
             ))
@@ -579,10 +612,10 @@ class SafetyManager:
         impact += parsed_command.execution_complexity * 0.3
         
         # Impact from number of operations
-        impact += min(len(parsed_command.required_skills) / 10.0, 0.3)
+        impact += min(self._get_required_skills_count(parsed_command) / 10.0, 0.3)
         
         # Impact from specific parameters
-        for param_name, param in parsed_command.parameters.items():
+        for param_name, param in self._get_parameters_dict(parsed_command).items():
             if param.data_type == 'numeric':
                 # High subdivision impact
                 if 'subdivision' in param_name.lower():
@@ -600,7 +633,8 @@ class SafetyManager:
         
         for violation in violations:
             if violation.auto_fixable and violation.parameter:
-                param = parsed_command.parameters.get(violation.parameter)
+                param_dict = self._get_parameters_dict(parsed_command)
+                param = param_dict.get(violation.parameter)
                 if param:
                     # Auto-correct parameter ranges
                     if "outside safe range" in violation.message:

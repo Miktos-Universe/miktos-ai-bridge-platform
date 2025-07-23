@@ -12,23 +12,30 @@ from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass
 from datetime import datetime
 
-# Local type definitions to avoid import conflicts
-# These should match the definitions in other modules
-
+# Local type definitions compatible with other modules
 @dataclass  
 class NLPResult:
-    """Local definition to avoid import issues"""
+    """Local definition compatible with nlp_processor.NLPResult"""
     intent: str
     entities: Dict[str, Any]
     confidence: float
     context: Dict[str, Any]
     processed_text: str
-    original_text: str = ""  # Add this field
-    intents: Optional[List[Any]] = None  # Add this field for backward compatibility
-    complexity_score: float = 0.5  # Add this field
+    original_text: str = ""
+    intents: Optional[List[Any]] = None
+    complexity_score: float = 0.5
     suggestions: Optional[List[str]] = None
+    suggested_skills: Optional[List[str]] = None
 
-from .nlp_processor import NLPIntent
+
+@dataclass
+class NLPIntent:
+    """Represents an identified intent from natural language"""
+    action: str  # create, modify, delete, etc.
+    target: str  # object, material, light, etc.
+    parameters: Dict[str, Any]
+    confidence: float
+    context_references: Optional[List[str]] = None
 
 
 @dataclass
@@ -39,6 +46,7 @@ class ParsedParameter:
     param_type: str
     confidence: float
     source_text: str
+    context_references: Optional[List[str]] = None
 
 
 @dataclass
@@ -52,6 +60,14 @@ class ParsedCommand:
     estimated_time: float
     context: Dict[str, Any]
     nlp_result: Any  # Will be the NLPResult from nlp_processor
+    
+    # Additional fields for compatibility with safety_manager
+    primary_intent: Optional[str] = None
+    target_object: Optional[str] = None
+    intents: Optional[List[NLPIntent]] = None
+    required_skills: Optional[List[str]] = None
+    dependencies: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class CommandParser:
