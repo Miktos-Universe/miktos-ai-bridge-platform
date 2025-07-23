@@ -637,6 +637,21 @@ class ViewportManager:
             }
         }
 
+    async def start(self):
+        """Start the viewport manager and initialize resources."""
+        self.logger.info("Starting viewport manager...")
+        
+        # Ensure default viewports are created
+        if not self.viewports:
+            self._create_default_viewports()
+        
+        # Set up viewport rendering context
+        for viewport_id, viewport in self.viewports.items():
+            if viewport.active:
+                self.logger.info(f"Initialized viewport: {viewport_id}")
+        
+        self.logger.info("Viewport manager started successfully")
+
     async def stop(self):
         """Stop the viewport manager and cleanup resources."""
         self.logger.info("Stopping viewport manager...")

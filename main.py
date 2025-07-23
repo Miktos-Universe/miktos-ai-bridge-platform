@@ -167,7 +167,7 @@ class MiktosPlatform:
             self.logger.info("Starting Miktos AI Bridge Platform...")
             
             # Initialize agent
-            self.agent = MiktosAgent(self.config.get('agent', {}))
+            self.agent = MiktosAgent(self.config)
             
             # Initialize viewer if enabled
             if self.config.get('viewer', {}).get('enabled', True):

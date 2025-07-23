@@ -57,14 +57,15 @@ class MiktosAgent:
         self._setup_logging()
         
         # Initialize core components
-        self.nlp_processor = NLPProcessor(config.get('nlp', {}))
-        self.command_parser = CommandParser(config.get('parser', {}))
-        self.safety_manager = SafetyManager(config.get('safety', {}))
-        self.learning_engine = LearningEngine(config.get('learning', {}))
+        agent_config = config.get('agent', {})
+        self.nlp_processor = NLPProcessor(agent_config.get('nlp', {}))
+        self.command_parser = CommandParser(agent_config.get('parser', {}))
+        self.safety_manager = SafetyManager(agent_config.get('safety', {}))
+        self.learning_engine = LearningEngine(agent_config.get('learning', {}))
         
         # Initialize integration components
         self.blender_bridge = BlenderBridge(config.get('blender', {}))
-        self.skill_manager = SkillManager(config.get('skills', {}))
+        self.skill_manager = SkillManager(agent_config.get('skills', {}))
         
         # Command queue and history
         self.command_queue = asyncio.Queue()
@@ -141,10 +142,11 @@ class MiktosAgent:
             # Step 3: Safety Validation
             safety_check = await self.safety_manager.validate_command(parsed_command)
             if not safety_check.is_safe:
+                error_message = safety_check.reason or "Unknown safety issue"
                 return ExecutionResult(
                     success=False,
-                    message=f"Safety check failed: {safety_check.reason}",
-                    errors=[safety_check.reason]
+                    message=f"Safety check failed: {error_message}",
+                    errors=[error_message]
                 )
             
             # Step 4: Skill Selection and Execution
@@ -165,8 +167,8 @@ class MiktosAgent:
                 errors=blender_result.errors
             )
             
-            # Store for learning
-            await self.learning_engine.record_execution(command, result)
+            # Store for learning (cast to avoid type conflicts)
+            await self.learning_engine.record_execution(command, result)  # type: ignore
             self.execution_results.append(result)
             
             self.logger.info(f"Command executed successfully in {execution_time:.2f}s")

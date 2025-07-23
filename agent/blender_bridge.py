@@ -353,14 +353,55 @@ class BlenderBridge:
                     size=params.get('size', 2.0),
                     location=params.get('location', (0, 0, 0))
                 )
+            elif obj_type == 'cone':
+                bpy.ops.mesh.primitive_cone_add(
+                    radius1=params.get('radius', 1.0),
+                    depth=params.get('depth', 2.0),
+                    location=params.get('location', (0, 0, 0))
+                )
             else:
                 return {"success": False, "message": f"Unknown object type: {obj_type}"}
             
-            # Get the created object
-            obj = bpy.context.active_object
+            # Get the created object - handle background mode properly
+            obj = None
+            
+            # Try different methods to get the created object
+            try:
+                # Method 1: Try active object
+                if hasattr(bpy.context, 'active_object') and bpy.context.active_object:
+                    obj = bpy.context.active_object
+            except AttributeError:
+                pass
+            
+            if obj is None:
+                try:
+                    # Method 2: Try selected objects
+                    if hasattr(bpy.context, 'selected_objects') and bpy.context.selected_objects:
+                        obj = bpy.context.selected_objects[-1]
+                except AttributeError:
+                    pass
+            
+            if obj is None:
+                # Method 3: Get the most recently created mesh object
+                mesh_objects = [o for o in bpy.data.objects if o.type == 'MESH']
+                if mesh_objects:
+                    obj = mesh_objects[-1]  # Get the last mesh object
+            
+            if obj is None:
+                return {"success": False, "message": "Could not find created object"}
+            
+            # Try to set context if available
+            try:
+                if hasattr(bpy.context, 'view_layer') and bpy.context.view_layer:
+                    bpy.context.view_layer.objects.active = obj
+                    if hasattr(obj, 'select_set'):
+                        obj.select_set(True)
+            except (AttributeError, RuntimeError):
+                # In background mode, context operations might not be available
+                pass
             
             # Apply any additional modifications
-            if 'subdivisions' in params:
+            if obj and 'subdivisions' in params:
                 self.subdivide_object(obj, params['subdivisions'])
             
             return {
@@ -375,9 +416,29 @@ class BlenderBridge:
     def modify_object(self, target, params):
         """Modify an existing object"""
         try:
-            # Get target object
+            # Get target object - handle background mode properly
             if target == 'selected':
-                obj = bpy.context.active_object
+                obj = None
+                
+                # Try different methods to get the active/selected object
+                try:
+                    if hasattr(bpy.context, 'active_object') and bpy.context.active_object:
+                        obj = bpy.context.active_object
+                except AttributeError:
+                    pass
+                
+                if obj is None:
+                    try:
+                        if hasattr(bpy.context, 'selected_objects') and bpy.context.selected_objects:
+                            obj = bpy.context.selected_objects[-1]
+                    except AttributeError:
+                        pass
+                
+                # In background mode, get the most recently created object if nothing is selected
+                if obj is None:
+                    mesh_objects = [o for o in bpy.data.objects if o.type == 'MESH']
+                    if mesh_objects:
+                        obj = mesh_objects[-1]
             else:
                 obj = bpy.data.objects.get(target)
             
@@ -497,12 +558,19 @@ if __name__ == "__main__":
     async def _start_blender_bridge(self):
         """Start Blender with the bridge script"""
         command = [
-            str(Path(self.blender_path) / "Contents/MacOS/Blender"),
-            "--background",
-            "--python", str(self.bridge_script_path)
+            str(Path(self.blender_path) / "Contents/MacOS/Blender")
         ]
         
-        self.logger.info(f"Starting Blender: {' '.join(command)}")
+        # Add GUI mode flag based on configuration
+        gui_mode = self.config.get('gui_mode', False)
+        if not gui_mode:
+            command.append("--background")
+        
+        command.extend([
+            "--python", str(self.bridge_script_path)
+        ])
+        
+        self.logger.info(f"Starting Blender ({'GUI' if gui_mode else 'background'} mode): {' '.join(command)}")
         
         self.blender_process = subprocess.Popen(
             command,

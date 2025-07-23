@@ -16,6 +16,19 @@ import spacy  # type: ignore
 from transformers import pipeline, AutoTokenizer, AutoModel  # type: ignore
 import torch  # type: ignore
 
+# Local type definition to avoid import issues
+@dataclass
+class NLPResult:
+    """Result from natural language processing"""
+    intent: str
+    entities: Dict[str, Any]
+    confidence: float
+    context: Dict[str, Any]
+    processed_text: str
+    suggestions: Optional[List[str]] = None
+    intents: Optional[List[Any]] = None  # For backward compatibility
+    suggested_skills: Optional[List[str]] = None  # For usage compatibility
+
 
 @dataclass
 class NLPIntent:
@@ -25,17 +38,6 @@ class NLPIntent:
     parameters: Dict[str, Any]
     confidence: float
     context_references: Optional[List[str]] = None
-
-
-@dataclass
-class NLPResult:
-    """Result of natural language processing"""
-    original_text: str
-    intents: List[NLPIntent]
-    entities: Dict[str, List[str]]
-    sentiment: float
-    complexity_score: float
-    suggested_skills: List[str]
 
 
 class NLPProcessor:
@@ -195,13 +197,19 @@ class NLPProcessor:
         # Suggest relevant skills
         suggested_skills = await self._suggest_skills(intents, entities)
         
+        # Extract primary intent (use first intent or default)
+        primary_intent = intents[0].action if intents else "unknown"
+        
+        # Calculate overall confidence (average of intent confidences)
+        overall_confidence = sum(intent.confidence for intent in intents) / len(intents) if intents else 0.0
+        
         result = NLPResult(
-            original_text=text,
-            intents=intents,
+            intent=primary_intent,
             entities=entities,
-            sentiment=sentiment,
-            complexity_score=complexity,
-            suggested_skills=suggested_skills
+            confidence=overall_confidence,
+            context=context or {},
+            processed_text=cleaned_text,
+            suggestions=suggested_skills
         )
         
         # Update command history for context
@@ -555,9 +563,9 @@ if __name__ == "__main__":
         for command in test_commands:
             result = await processor.process(command)
             print(f"Command: {command}")
-            print(f"Intents: {[f'{i.action}_{i.target}' for i in result.intents]}")
+            print(f"Intents: {[f'{i.action}_{i.target}' for i in result.intents] if result.intents else ['No intents']}")
             print(f"Entities: {result.entities}")
-            print(f"Suggested Skills: {result.suggested_skills}")
+            print(f"Suggested Skills: {result.suggested_skills or 'None'}")
             print("---")
     
     asyncio.run(test_nlp())

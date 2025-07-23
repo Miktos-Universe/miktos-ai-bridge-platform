@@ -76,6 +76,10 @@ class SceneSync:
         self.is_syncing = False
         self.sync_task: Optional[asyncio.Task] = None
     
+    async def start(self):
+        """Start scene synchronization (alias for start_sync)"""
+        await self.start_sync()
+    
     async def start_sync(self):
         """Start automatic scene synchronization"""
         if self.is_syncing:

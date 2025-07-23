@@ -12,26 +12,23 @@ from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass
 from datetime import datetime
 
+# Local type definitions to avoid import conflicts
+# These should match the definitions in other modules
 
-@dataclass
-class NLPIntent:
-    """Represents an identified intent from natural language"""
-    action: str  # create, modify, delete, etc.
-    target: str  # object, material, light, etc.
-    parameters: Dict[str, Any]
-    confidence: float
-    context_references: Optional[List[str]] = None
-
-
-@dataclass
+@dataclass  
 class NLPResult:
-    """Result of natural language processing"""
-    original_text: str
-    intents: List[NLPIntent]
-    entities: Dict[str, List[str]]
-    sentiment: float
-    complexity_score: float
-    suggested_skills: List[str]
+    """Local definition to avoid import issues"""
+    intent: str
+    entities: Dict[str, Any]
+    confidence: float
+    context: Dict[str, Any]
+    processed_text: str
+    original_text: str = ""  # Add this field
+    intents: Optional[List[Any]] = None  # Add this field for backward compatibility
+    complexity_score: float = 0.5  # Add this field
+    suggestions: Optional[List[str]] = None
+
+from .nlp_processor import NLPIntent
 
 
 @dataclass
@@ -39,24 +36,22 @@ class ParsedParameter:
     """Represents a parsed parameter with validation info"""
     name: str
     value: Any
-    data_type: str
+    param_type: str
     confidence: float
-    validation_status: str = "valid"  # valid, invalid, needs_validation
+    source_text: str
 
 
 @dataclass
 class ParsedCommand:
     """Represents a fully parsed command ready for execution"""
     original_text: str
-    primary_intent: str
-    target_object: str
-    parameters: Dict[str, ParsedParameter]
-    intents: List[NLPIntent]
+    intent: str
+    parameters: List[ParsedParameter] 
     confidence: float
     execution_complexity: float
-    required_skills: List[str]
-    dependencies: Optional[List[str]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    estimated_time: float
+    context: Dict[str, Any]
+    nlp_result: Any  # Will be the NLPResult from nlp_processor
 
 
 class CommandParser:
@@ -187,45 +182,106 @@ class CommandParser:
             ParsedCommand ready for execution
         """
         # Validate input
-        if not nlp_result.intents:
-            raise ValueError("No intents found in NLP result")
+        if not nlp_result.intent:
+            raise ValueError("No intent found in NLP result")
         
-        # Select primary intent
-        primary_intent = self._select_primary_intent(nlp_result.intents)
-        
-        # Extract and validate parameters
-        parameters = await self._extract_parameters(nlp_result, primary_intent)
+        # Extract parameters from entities and context
+        parameters = await self._extract_parameters_from_entities(nlp_result)
         
         # Determine target object
-        target_object = self._determine_target_object(nlp_result, primary_intent)
+        target_object = self._determine_target_from_entities(nlp_result)
         
         # Calculate execution complexity
         complexity = self._calculate_execution_complexity(nlp_result, parameters)
         
-        # Determine required skills
-        required_skills = self._determine_required_skills(primary_intent, parameters)
+        # Estimate execution time
+        estimated_time = self._estimate_execution_time(nlp_result.intent, parameters)
         
-        # Extract dependencies
-        dependencies = self._extract_dependencies(nlp_result, parameters)
-        
-        # Create parsed command
+        # Create parsed command with shared structure
         parsed_command = ParsedCommand(
-            original_text=nlp_result.original_text,
-            primary_intent=f"{primary_intent.action}_{primary_intent.target}",
-            target_object=target_object,
+            original_text=nlp_result.processed_text,
+            intent=nlp_result.intent,
             parameters=parameters,
-            intents=nlp_result.intents,
-            confidence=primary_intent.confidence,
+            confidence=nlp_result.confidence,
             execution_complexity=complexity,
-            required_skills=required_skills,
-            dependencies=dependencies,
-            metadata={
-                'entities': nlp_result.entities,
-                'sentiment': nlp_result.sentiment,
-                'suggested_skills': nlp_result.suggested_skills,
-                'timestamp': datetime.now().isoformat()
-            }
+            estimated_time=estimated_time,
+            context=nlp_result.context,
+            nlp_result=nlp_result
         )
+        
+        return parsed_command
+    
+    async def _extract_parameters_from_entities(self, nlp_result: NLPResult) -> List[ParsedParameter]:
+        """Extract parameters from entities in the NLP result"""
+        parameters = []
+        
+        for entity_type, entity_value in nlp_result.entities.items():
+            if isinstance(entity_value, list) and entity_value:
+                entity_value = entity_value[0]  # Take first value
+            
+            param = ParsedParameter(
+                name=entity_type,
+                value=entity_value,
+                param_type=self._infer_parameter_type(entity_value),
+                confidence=nlp_result.confidence,
+                source_text=str(entity_value)
+            )
+            parameters.append(param)
+        
+        return parameters
+    
+    def _determine_target_from_entities(self, nlp_result: NLPResult) -> str:
+        """Determine target object from entities"""
+        # Look for object-related entities
+        if 'objects' in nlp_result.entities:
+            objects = nlp_result.entities['objects']
+            if isinstance(objects, list) and objects:
+                return objects[0]
+        
+        # Default target based on intent
+        intent_targets = {
+            'create': 'cube',
+            'modify': 'selected',
+            'delete': 'selected',
+            'query': 'scene'
+        }
+        return intent_targets.get(nlp_result.intent, 'unknown')
+    
+    def _calculate_execution_complexity(self, nlp_result: NLPResult, parameters: List[ParsedParameter]) -> float:
+        """Calculate execution complexity score"""
+        base_complexity = 0.3
+        param_complexity = len(parameters) * 0.1
+        intent_complexity = {
+            'create': 0.2,
+            'modify': 0.4,
+            'delete': 0.1,
+            'query': 0.1
+        }.get(nlp_result.intent, 0.5)
+        
+        return min(1.0, base_complexity + param_complexity + intent_complexity)
+    
+    def _estimate_execution_time(self, intent: str, parameters: List[ParsedParameter]) -> float:
+        """Estimate execution time in seconds"""
+        base_times = {
+            'create': 2.0,
+            'modify': 3.0,
+            'delete': 1.0,
+            'query': 0.5
+        }
+        base_time = base_times.get(intent, 2.0)
+        param_time = len(parameters) * 0.5
+        return base_time + param_time
+    
+    def _infer_parameter_type(self, value: Any) -> str:
+        """Infer the type of a parameter value"""
+        if isinstance(value, (int, float)):
+            return "numeric"
+        elif isinstance(value, bool):
+            return "boolean"
+        elif isinstance(value, (list, tuple)):
+            return "coordinate" if len(value) == 3 else "list"
+        else:
+            return "string"
         
         return parsed_command
     
@@ -271,15 +327,12 @@ class CommandParser:
         # Convert value to appropriate type
         converted_value, confidence = self._convert_parameter_value(value, param_type, text)
         
-        # Validate parameter
-        validation_status = self._validate_parameter(name, converted_value, param_type)
-        
         return ParsedParameter(
             name=name,
             value=converted_value,
-            data_type=param_type,
+            param_type=param_type,
             confidence=confidence,
-            validation_status=validation_status
+            source_text=str(value)
         )
     
     def _determine_parameter_type(self, name: str, value: Any) -> str:
@@ -424,8 +477,9 @@ class CommandParser:
                 param = ParsedParameter(
                     name=param_name,
                     value=float(number),
-                    data_type='numeric',
-                    confidence=0.7
+                    param_type='numeric',
+                    confidence=0.7,
+                    source_text=str(number)
                 )
                 parameters[param_name] = param
         
@@ -436,8 +490,9 @@ class CommandParser:
                 param = ParsedParameter(
                     name=param_name,
                     value=obj,
-                    data_type='string',
-                    confidence=0.8
+                    param_type='string',
+                    confidence=0.8,
+                    source_text=str(obj)
                 )
                 parameters[param_name] = param
         
@@ -448,8 +503,9 @@ class CommandParser:
                 param = ParsedParameter(
                     name=param_name,
                     value=material,
-                    data_type='string',
-                    confidence=0.8
+                    param_type='string',
+                    confidence=0.8,
+                    source_text=str(material)
                 )
                 parameters[param_name] = param
         
@@ -485,9 +541,9 @@ class CommandParser:
                     defaults[param_name] = ParsedParameter(
                         name=param_name,
                         value=default_value,
-                        data_type=param_type,
+                        param_type=param_type,
                         confidence=0.5,  # Lower confidence for defaults
-                        validation_status="valid"
+                        source_text=f"default:{param_name}"
                     )
         
         return defaults
@@ -512,25 +568,6 @@ class CommandParser:
         
         # Default to general object
         return "object"
-    
-    def _calculate_execution_complexity(self, nlp_result: NLPResult, parameters: Dict[str, ParsedParameter]) -> float:
-        """Calculate the complexity score for command execution"""
-        complexity = 0.0
-        
-        # Base complexity from NLP result
-        complexity += nlp_result.complexity_score * 0.4
-        
-        # Complexity from number of intents
-        complexity += min(len(nlp_result.intents) * 0.1, 0.3)
-        
-        # Complexity from number of parameters
-        complexity += min(len(parameters) * 0.05, 0.2)
-        
-        # Complexity from parameter validation issues
-        invalid_params = sum(1 for p in parameters.values() if p.validation_status != "valid")
-        complexity += min(invalid_params * 0.1, 0.1)
-        
-        return min(complexity, 1.0)
     
     def _determine_required_skills(self, primary_intent: NLPIntent, parameters: Dict[str, ParsedParameter]) -> List[str]:
         """Determine which skills are required for command execution"""
@@ -618,15 +655,10 @@ def validate_parsed_command(command: ParsedCommand) -> Dict[str, Any]:
     if command.execution_complexity > 0.8:
         report["warnings"].append(f"High execution complexity: {command.execution_complexity}")
     
-    # Check parameter validation
-    invalid_params = [p for p in command.parameters.values() if p.validation_status != "valid"]
-    if invalid_params:
-        report["errors"].extend([f"Invalid parameter: {p.name} - {p.validation_status}" for p in invalid_params])
-        report["valid"] = False
-    
-    # Check required skills availability
-    if not command.required_skills:
-        report["warnings"].append("No required skills identified")
+    # Check parameter confidence
+    low_confidence_params = [p for p in command.parameters if p.confidence < 0.7]
+    if low_confidence_params:
+        report["warnings"].extend([f"Low confidence parameter: {p.name} - {p.confidence:.2f}" for p in low_confidence_params])
     
     return report
 

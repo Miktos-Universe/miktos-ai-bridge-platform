@@ -201,16 +201,16 @@ class RealTimeViewer:
         """Set render quality (low, medium, high, ultra)"""
         if quality in ['low', 'medium', 'high', 'ultra']:
             self.viewer_state.render_quality = quality
-            await self.webgl_renderer.set_quality(quality)
+            await self.webgl_renderer.set_render_quality(quality)
             await self._broadcast_quality_update()
     
     async def take_screenshot(self) -> str:
         """Take a screenshot of the current view"""
         try:
-            image_data = await self.webgl_renderer.capture_frame()
+            image_data = await self.webgl_renderer.take_screenshot()
             
             # Convert to base64 for transmission
-            screenshot_b64 = base64.b64encode(image_data).decode('utf-8')
+            screenshot_b64 = base64.b64encode(image_data.encode('utf-8')).decode('utf-8')
             
             return screenshot_b64
             
@@ -318,7 +318,7 @@ class RealTimeViewer:
                     break
             
             # Update renderer
-            await self.webgl_renderer.update_object(object_data)
+            await self.webgl_renderer.update_object(object_data['name'], object_data)
             
             # Broadcast to clients
             await self._broadcast_object_update("modified", object_data)
@@ -345,7 +345,7 @@ class RealTimeViewer:
         self.viewer_state.scene_objects = []
         
         # Update renderer
-        await self.webgl_renderer.clear_scene()
+        await self.webgl_renderer.reset_scene()
         
         # Broadcast to clients
         await self._broadcast_scene_cleared()
@@ -486,12 +486,11 @@ class RealTimeViewer:
         })
         await self._broadcast_message(message)
     
-    async def _broadcast_frame(self, frame_data: bytes):
+    async def _broadcast_frame(self, frame_data: Dict[str, Any]):
         """Broadcast rendered frame to all clients"""
-        frame_b64 = base64.b64encode(frame_data).decode('utf-8')
         message = json.dumps({
             "type": "frame_update",
-            "data": frame_b64
+            "data": frame_data
         })
         await self._broadcast_message(message)
     

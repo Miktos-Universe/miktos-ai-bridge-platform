@@ -1,9 +1,26 @@
 """
 Learning Engine for Miktos Agent
 
-Provides adaptive learning capabilities for skill optimization,
-user preference recognition, and performance improvement.
+Implements reinforcement learning and continuous improvement capabilities
+for the AI agent, optimizing command execution and skill selection.
 """
+
+import asyncio
+import json
+import logging
+import pickle
+from typing import Dict, List, Optional, Any, Tuple
+from datetime import datetime, timedelta
+from collections import defaultdict, deque
+from dataclasses import dataclass
+
+# Import shared types from agent module
+from .agent import AgentCommand, ExecutionResult
+
+# Import typing for type hints that don't cause circular imports
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    pass  # Can import additional types here if needed
 
 import json
 import logging
@@ -29,27 +46,6 @@ class ParsedCommand:
     required_skills: List[str]
     dependencies: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
-
-
-@dataclass
-class AgentCommand:
-    """Represents a user command with metadata"""
-    text: str
-    timestamp: datetime
-    session_id: str
-    context: Dict[str, Any]
-    priority: str = "normal"
-
-
-@dataclass
-class ExecutionResult:
-    """Represents the result of command execution"""
-    success: bool
-    message: str
-    data: Optional[Dict[str, Any]] = None
-    execution_time: float = 0.0
-    skills_used: Optional[List[str]] = None
-    errors: Optional[List[str]] = None
 
 
 @dataclass

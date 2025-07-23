@@ -41,10 +41,41 @@ agent:
 
 # Blender Integration
 blender:
-  # Installation paths (auto-detected if not specified)
-  path: "/Applications/Blender.app"  # macOS default
-  # path: "C:\\Program Files\\Blender Foundation\\Blender 3.6"  # Windows
-  # path: "/usr/bin/blender"  # Linux
+  # Installation paths - Platform-specific options
+  # The system will try these paths in order until it finds a valid Blender installation
+  paths:
+    # macOS options (in order of preference)
+    macos:
+      - "/Applications/Blender.app"
+      - "/Applications/Blender 4.3.app"
+      - "/Applications/Blender 4.2.app" 
+      - "/Applications/Blender 4.1.app"
+      - "/Applications/Blender 4.0.app"
+      - "/Applications/Blender 3.6.app"
+      - "/Users/$(USER)/Applications/Blender.app"
+      - "/opt/homebrew/bin/blender"
+      
+    # Windows options
+    windows:
+      - "C:\\Program Files\\Blender Foundation\\Blender 4.3\\blender.exe"
+      - "C:\\Program Files\\Blender Foundation\\Blender 4.2\\blender.exe"
+      - "C:\\Program Files\\Blender Foundation\\Blender 4.1\\blender.exe"
+      - "C:\\Program Files\\Blender Foundation\\Blender 4.0\\blender.exe"
+      - "C:\\Program Files\\Blender Foundation\\Blender 3.6\\blender.exe"
+      - "C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Blender Foundation\\Blender 4.3\\blender.exe"
+      - "C:\\Program Files (x86)\\Blender Foundation\\Blender 4.3\\blender.exe"
+      
+    # Linux options  
+    linux:
+      - "/usr/bin/blender"
+      - "/usr/local/bin/blender"
+      - "/opt/blender/blender"
+      - "/snap/bin/blender"
+      - "/home/$(USER)/.local/bin/blender"
+      - "/flatpak/app/org.blender.Blender/current/active/files/bin/blender"
+  
+  # Override: specify exact path (takes precedence over auto-detection)
+  path: "/Applications/Blender.app"  # Current active path
   
   python_path: null  # Auto-detected from Blender installation
   
@@ -52,6 +83,9 @@ blender:
   socket_port: 8089
   startup_timeout: 30.0
   operation_timeout: 60.0
+  
+  # UI settings
+  gui_mode: true  # Set to false for background mode, true for GUI mode
   
   # Scene management
   auto_save: true
@@ -89,6 +123,15 @@ viewer:
   port: 8080
   host: "localhost"
   
+  # WebSocket settings (enhanced with websockets package)
+  websocket:
+    enabled: true
+    compression: true
+    ping_interval: 20  # seconds
+    ping_timeout: 10   # seconds
+    max_message_size: 1048576  # 1MB
+    close_timeout: 5   # seconds
+    
   # Rendering settings
   resolution: [1920, 1080]
   fps_target: 60
