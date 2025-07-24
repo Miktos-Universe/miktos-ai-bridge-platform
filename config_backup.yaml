@@ -1,0 +1,394 @@
+# Miktos AI Bridge Platform Configuration
+
+# Core Platform Settings
+platform:
+  name: "Miktos AI Bridge"
+  version: "1.0.0"
+  debug: false
+  environment: "development"
+
+# AI Agent Configuration
+agent:
+  # Natural Language Processing
+  nlp:
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    context_window: 5
+    fallback_enabled: true
+    cache_embeddings: true
+  
+  # LLM Integration (Priority 2 Enhancement)
+  llm:
+    enabled: true
+    provider: "openai"  # openai, anthropic, local, fallback
+    max_tokens: 1000
+    temperature: 0.7
+    max_history: 20
+    
+    # OpenAI Configuration
+    openai:
+      enabled: true
+      model: "gpt-3.5-turbo"
+      api_key: null  # Set via environment variable OPENAI_API_KEY
+      
+    # Anthropic Configuration  
+    anthropic:
+      enabled: false
+      model: "claude-3-sonnet-20240229"
+      api_key: null  # Set via environment variable ANTHROPIC_API_KEY
+      
+    # Local LLM Configuration
+    local:
+      enabled: false
+      model_path: null
+      endpoint: "http://localhost:11434"  # Ollama default
+    
+    # Usage limits
+    daily_token_limit: 100000
+    cost_limit_usd: 10.0
+    
+  # Command Parser
+  parser:
+    max_complexity: 0.8
+    safety_checks: true
+    intent_confidence_threshold: 0.6
+    parameter_validation: true
+    
+  # Safety Manager
+  safety:
+    validation_level: "normal"  # low, normal, high, strict
+    rollback_enabled: true
+    max_operations_per_command: 10
+    destructive_operations_require_confirmation: true
+    backup_before_major_changes: true
+    
+  # Learning Engine
+  learning:
+    track_performance: true
+    optimize_skills: true
+    community_data: false  # Anonymous usage statistics
+    learning_rate: 0.1
+    performance_history_length: 100
+
+# Blender Integration
+blender:
+  # Installation paths - Platform-specific options
+  # The system will try these paths in order until it finds a valid Blender installation
+  paths:
+    # macOS options (in order of preference)
+    macos:
+      - "/Applications/Blender.app"
+      - "/Applications/Blender 4.3.app"
+      - "/Applications/Blender 4.2.app" 
+      - "/Applications/Blender 4.1.app"
+      - "/Applications/Blender 4.0.app"
+      - "/Applications/Blender 3.6.app"
+      - "/Users/$(USER)/Applications/Blender.app"
+      - "/opt/homebrew/bin/blender"
+      
+    # Windows options
+    windows:
+      - "C:\\Program Files\\Blender Foundation\\Blender 4.3\\blender.exe"
+      - "C:\\Program Files\\Blender Foundation\\Blender 4.2\\blender.exe"
+      - "C:\\Program Files\\Blender Foundation\\Blender 4.1\\blender.exe"
+      - "C:\\Program Files\\Blender Foundation\\Blender 4.0\\blender.exe"
+      - "C:\\Program Files\\Blender Foundation\\Blender 3.6\\blender.exe"
+      - "C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Blender Foundation\\Blender 4.3\\blender.exe"
+      - "C:\\Program Files (x86)\\Blender Foundation\\Blender 4.3\\blender.exe"
+      
+    # Linux options  
+    linux:
+      - "/usr/bin/blender"
+      - "/usr/local/bin/blender"
+      - "/opt/blender/blender"
+      - "/snap/bin/blender"
+      - "/home/$(USER)/.local/bin/blender"
+      - "/flatpak/app/org.blender.Blender/current/active/files/bin/blender"
+  
+  # Override: specify exact path (takes precedence over auto-detection)
+  path: "/Applications/Blender.app"  # Current active path
+  
+  python_path: null  # Auto-detected from Blender installation
+  
+  # Communication settings
+  socket_port: 8089
+  startup_timeout: 30.0
+  operation_timeout: 60.0
+  
+  # UI settings
+  gui_mode: true  # Set to false for background mode, true for GUI mode
+  
+  # Scene management
+  auto_save: true
+  backup_interval: 300  # seconds
+  max_backups: 10
+  startup_blend: "templates/default_scene.blend"
+  
+  # Performance settings
+  memory_limit_mb: 2048
+  cpu_cores: null  # Auto-detect
+
+# Skills Library Configuration
+skills:
+  # Execution settings
+  max_skills_per_command: 3
+  skill_timeout: 30.0
+  parallel_execution: false
+  cache_skills: true
+  
+  # Skill discovery
+  auto_load_custom_skills: true
+  custom_skills_directory: "custom_skills/"
+  
+  # Performance tracking
+  track_usage_statistics: true
+  optimize_frequently_used: true
+  skill_complexity_weighting: true
+
+# Real-time 3D Viewer
+viewer:
+  enabled: true
+  auto_start: true
+  
+  # Server settings
+  port: 8082
+  host: "localhost"
+  
+  # WebSocket settings (enhanced with websockets package)
+  websocket:
+    enabled: true
+    port: 8083  # Added explicit WebSocket port
+    compression: true
+    ping_interval: 20  # seconds
+    ping_timeout: 10   # seconds
+    max_message_size: 1048576  # 1MB
+    close_timeout: 5   # seconds
+    
+    # Real-time collaboration (Priority 3)
+    enable_collaboration: true
+    max_concurrent_users: 10
+    sync_interval: 100  # milliseconds for real-time sync
+    conflict_resolution: "latest_wins"  # latest_wins, merge, manual
+    
+  # Rendering settings
+  resolution: [1920, 1080]
+  fps_target: 60
+  quality: "high"  # low, medium, high, ultra
+  
+  # Progressive loading (Priority 3)
+  progressive_loading:
+    enabled: true
+    chunk_size: 1000  # objects per chunk
+    update_interval: 500  # milliseconds
+    show_progress: true
+  
+  # Viewport settings
+  default_camera_position: [5, 5, 5]
+  default_camera_target: [0, 0, 0]
+  default_viewport_mode: "perspective"
+  
+  # Performance settings
+  max_polygons: 1000000
+  texture_resolution_limit: 2048
+  enable_shadows: true
+  enable_reflections: true
+  anti_aliasing: "MSAA_4x"
+  
+  # Client settings
+  max_clients: 10
+  client_timeout: 300  # seconds
+
+# Advanced Caching System (Priority 3 Enhancement)
+caching:
+  enabled: true
+  
+  # Cache backends
+  backend: "memory"  # memory, redis, disk, hybrid
+  redis_url: "redis://localhost:6379"  # if using redis backend
+  disk_cache_dir: "cache/"
+  
+  # Cache strategies
+  llm_responses:
+    enabled: true
+    ttl: 3600  # 1 hour
+    max_size: "100MB"
+    compression: true
+    semantic_similarity_threshold: 0.95  # cache hits based on semantic similarity
+    
+  workflow_results:
+    enabled: true
+    ttl: 1800  # 30 minutes
+    max_size: "500MB"
+    cache_intermediate_steps: true
+    
+  assets:
+    enabled: true
+    ttl: 86400  # 24 hours
+    max_size: "1GB"
+    cache_textures: true
+    cache_models: true
+    
+  # Cache optimization
+  optimization:
+    auto_cleanup: true
+    cleanup_interval: 300  # 5 minutes
+    preload_popular: true
+    background_refresh: true
+    
+  # Performance metrics
+  metrics:
+    track_hit_rate: true
+    track_memory_usage: true
+    log_cache_operations: false
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "logs/miktos.log"
+  max_size_mb: 50
+  backup_count: 10
+  
+  # Component-specific logging
+  components:
+    agent: "INFO"
+    blender_bridge: "DEBUG"
+    skills_manager: "INFO"
+    viewer: "INFO"
+    nlp_processor: "DEBUG"
+  
+  # Log formatting
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  date_format: "%Y-%m-%d %H:%M:%S"
+
+# Performance Monitoring (Priority 3 Enhancement)
+monitoring:
+  enabled: true
+  metrics_port: 9090
+  real_time_updates: true
+  update_interval: 1  # seconds
+  
+  # Metrics to track
+  track_command_latency: true
+  track_skill_performance: true
+  track_viewer_fps: true
+  track_memory_usage: true
+  track_cache_performance: true
+  track_websocket_activity: true
+  
+  # Performance targets (Priority 3 goals)
+  targets:
+    max_workflow_time: 60  # seconds - sub-1-minute goal
+    min_cache_hit_rate: 0.8  # 80% cache hit rate
+    max_response_time: 200  # milliseconds
+    min_fps: 30  # minimum viewer FPS
+  
+  # Alerting and optimization
+  alert_on_errors: true
+  alert_on_performance_degradation: true
+  auto_optimization: true
+  alert_email: null
+
+# Security Settings
+security:
+  # API security
+  require_api_key: false
+  api_key: null
+  
+  # File system access
+  restricted_directories: []
+  allow_system_commands: false
+  
+  # Network security
+  allow_external_connections: false
+  cors_origins: ["http://localhost:3000", "http://localhost:8080"]
+
+# Development Settings (only in development mode)
+development:
+  hot_reload: true
+  debug_ui: true
+  enable_profiling: false
+  mock_blender: false  # Use mock Blender for testing
+  
+  # Testing settings
+  test_data_directory: "tests/data/"
+  generate_test_reports: true
+
+# Production Settings (only in production mode)
+production:
+  error_reporting: true
+  telemetry: false
+  auto_updates: true
+  
+  # Performance optimization
+  preload_skills: true
+  optimize_memory: true
+  cpu_priority: "normal"
+
+# Cloud Integration (optional)
+cloud:
+  enabled: false
+  
+  # Sync settings
+  sync_projects: false
+  sync_skills: false
+  sync_preferences: false
+  
+  # API endpoints
+  api_base_url: "https://api.miktos.ai"
+  cdn_base_url: "https://cdn.miktos.ai"
+  
+  # Authentication
+  user_token: null
+  refresh_token: null
+
+# User Preferences
+user:
+  # Interface preferences
+  theme: "dark"  # light, dark, auto
+  language: "en"
+  
+  # Workflow preferences
+  auto_save_frequency: 300  # seconds
+  show_advanced_options: false
+  confirm_destructive_operations: true
+  
+  # Skill preferences
+  preferred_skill_complexity: "medium"  # low, medium, high
+  enable_skill_suggestions: true
+  
+  # Viewer preferences
+  default_shading_mode: "material"  # wireframe, solid, material, rendered
+  show_grid: true
+  show_axis: true
+  
+# Template configurations for different use cases
+templates:
+  # Modeling workflow
+  modeling:
+    viewer:
+      quality: "high"
+      enable_wireframe_overlay: true
+    skills:
+      max_skills_per_command: 5
+      prefer_simple_operations: true
+  
+  # Animation workflow  
+  animation:
+    viewer:
+      fps_target: 24
+      enable_motion_blur: true
+    blender:
+      memory_limit_mb: 4096
+  
+  # Rendering workflow
+  rendering:
+    viewer:
+      quality: "ultra"
+      enable_gpu_acceleration: true
+    blender:
+      cpu_cores: -1  # Use all cores
+
+# Extensions and plugins
+extensions:
+  enabled: []  # List of enabled extension names
+  directory: "extensions/"
+  auto_load: false
