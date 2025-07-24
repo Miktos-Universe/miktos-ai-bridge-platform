@@ -57,7 +57,9 @@ class RealTimeViewer:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.port = config.get('port', 8080)
-        self.ws_port = config.get('ws_port', 8081)  # Separate WebSocket port
+        # Read WebSocket port from nested config or fallback
+        ws_config = config.get('websocket', {})
+        self.ws_port = ws_config.get('port', config.get('ws_port', 8081))
         self.resolution = config.get('resolution', [1920, 1080])
         self.fps_target = config.get('fps_target', 60)
         self.quality = config.get('quality', 'high')
@@ -161,7 +163,7 @@ class RealTimeViewer:
             self.logger.error("websockets package not available")
             return
 
-        async def handle_client(websocket, path):
+        async def handle_client(websocket):
             """Handle WebSocket client connections"""
             self.connected_clients.add(websocket)
             self.logger.info(f"Client connected: {websocket.remote_address}")

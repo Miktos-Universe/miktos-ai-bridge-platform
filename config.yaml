@@ -15,6 +15,36 @@ agent:
     context_window: 5
     fallback_enabled: true
     cache_embeddings: true
+  
+  # LLM Integration (Priority 2 Enhancement)
+  llm:
+    enabled: true
+    provider: "openai"  # openai, anthropic, local, fallback
+    max_tokens: 1000
+    temperature: 0.7
+    max_history: 20
+    
+    # OpenAI Configuration
+    openai:
+      enabled: true
+      model: "gpt-3.5-turbo"
+      api_key: null  # Set via environment variable OPENAI_API_KEY
+      
+    # Anthropic Configuration  
+    anthropic:
+      enabled: false
+      model: "claude-3-sonnet-20240229"
+      api_key: null  # Set via environment variable ANTHROPIC_API_KEY
+      
+    # Local LLM Configuration
+    local:
+      enabled: false
+      model_path: null
+      endpoint: "http://localhost:11434"  # Ollama default
+    
+    # Usage limits
+    daily_token_limit: 100000
+    cost_limit_usd: 10.0
     
   # Command Parser
   parser:
@@ -120,22 +150,36 @@ viewer:
   auto_start: true
   
   # Server settings
-  port: 8080
+  port: 8082
   host: "localhost"
   
   # WebSocket settings (enhanced with websockets package)
   websocket:
     enabled: true
+    port: 8083  # Added explicit WebSocket port
     compression: true
     ping_interval: 20  # seconds
     ping_timeout: 10   # seconds
     max_message_size: 1048576  # 1MB
     close_timeout: 5   # seconds
     
+    # Real-time collaboration (Priority 3)
+    enable_collaboration: true
+    max_concurrent_users: 10
+    sync_interval: 100  # milliseconds for real-time sync
+    conflict_resolution: "latest_wins"  # latest_wins, merge, manual
+    
   # Rendering settings
   resolution: [1920, 1080]
   fps_target: 60
   quality: "high"  # low, medium, high, ultra
+  
+  # Progressive loading (Priority 3)
+  progressive_loading:
+    enabled: true
+    chunk_size: 1000  # objects per chunk
+    update_interval: 500  # milliseconds
+    show_progress: true
   
   # Viewport settings
   default_camera_position: [5, 5, 5]
@@ -152,6 +196,49 @@ viewer:
   # Client settings
   max_clients: 10
   client_timeout: 300  # seconds
+
+# Advanced Caching System (Priority 3 Enhancement)
+caching:
+  enabled: true
+  
+  # Cache backends
+  backend: "memory"  # memory, redis, disk, hybrid
+  redis_url: "redis://localhost:6379"  # if using redis backend
+  disk_cache_dir: "cache/"
+  
+  # Cache strategies
+  llm_responses:
+    enabled: true
+    ttl: 3600  # 1 hour
+    max_size: "100MB"
+    compression: true
+    semantic_similarity_threshold: 0.95  # cache hits based on semantic similarity
+    
+  workflow_results:
+    enabled: true
+    ttl: 1800  # 30 minutes
+    max_size: "500MB"
+    cache_intermediate_steps: true
+    
+  assets:
+    enabled: true
+    ttl: 86400  # 24 hours
+    max_size: "1GB"
+    cache_textures: true
+    cache_models: true
+    
+  # Cache optimization
+  optimization:
+    auto_cleanup: true
+    cleanup_interval: 300  # 5 minutes
+    preload_popular: true
+    background_refresh: true
+    
+  # Performance metrics
+  metrics:
+    track_hit_rate: true
+    track_memory_usage: true
+    log_cache_operations: false
 
 # Logging Configuration
 logging:
@@ -172,19 +259,32 @@ logging:
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   date_format: "%Y-%m-%d %H:%M:%S"
 
-# Performance Monitoring
+# Performance Monitoring (Priority 3 Enhancement)
 monitoring:
-  enabled: false
+  enabled: true
   metrics_port: 9090
+  real_time_updates: true
+  update_interval: 1  # seconds
   
   # Metrics to track
   track_command_latency: true
   track_skill_performance: true
   track_viewer_fps: true
   track_memory_usage: true
+  track_cache_performance: true
+  track_websocket_activity: true
   
-  # Alerting (optional)
-  alert_on_errors: false
+  # Performance targets (Priority 3 goals)
+  targets:
+    max_workflow_time: 60  # seconds - sub-1-minute goal
+    min_cache_hit_rate: 0.8  # 80% cache hit rate
+    max_response_time: 200  # milliseconds
+    min_fps: 30  # minimum viewer FPS
+  
+  # Alerting and optimization
+  alert_on_errors: true
+  alert_on_performance_degradation: true
+  auto_optimization: true
   alert_email: null
 
 # Security Settings

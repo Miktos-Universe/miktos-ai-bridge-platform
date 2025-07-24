@@ -12,6 +12,10 @@ torch>=1.12.0
 sentence-transformers>=2.2.0
 nltk>=3.7
 
+# LLM Integration (Priority 2 Enhancement)
+openai>=1.0.0
+anthropic>=0.3.0
+
 # Machine Learning & AI
 scikit-learn>=1.1.0
 numpy>=1.21.0
