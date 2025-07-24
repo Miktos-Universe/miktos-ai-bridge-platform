@@ -25,6 +25,7 @@ except ImportError:
 from .scene_sync import SceneSync  # type: ignore
 from .viewport_manager import ViewportManager  # type: ignore
 from .webgl_renderer import WebGLRenderer  # type: ignore
+from .port_manager import PortManager  # type: ignore
 
 
 @dataclass
@@ -56,16 +57,30 @@ class RealTimeViewer:
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.port = config.get('port', 8080)
-        # Read WebSocket port from nested config or fallback
-        ws_config = config.get('websocket', {})
-        self.ws_port = ws_config.get('port', config.get('ws_port', 8081))
+        
+        # Setup logging first
+        self.logger = logging.getLogger('RealTimeViewer')
+        
+        # Initialize port manager for dynamic port allocation
+        self.port_manager = PortManager(self.logger)
+        
+        # Get preferred ports from config
+        preferred_http = config.get('port', 8080)
+        preferred_ws = config.get('websocket', {}).get('port', config.get('ws_port', 8081))
+        
+        # Allocate available ports
+        try:
+            self.port, self.ws_port = self.port_manager.allocate_port_pair(preferred_http, preferred_ws)
+            self.logger.info(f"Allocated ports: HTTP={self.port}, WebSocket={self.ws_port}")
+        except RuntimeError as e:
+            self.logger.error(f"Failed to allocate ports: {e}")
+            # Fallback to original behavior
+            self.port = preferred_http
+            self.ws_port = preferred_ws
+            
         self.resolution = config.get('resolution', [1920, 1080])
         self.fps_target = config.get('fps_target', 60)
         self.quality = config.get('quality', 'high')
-        
-        # Setup logging
-        self.logger = logging.getLogger('RealTimeViewer')
         
         # Initialize components
         self.scene_sync = SceneSync(config.get('sync', {}))
@@ -115,8 +130,27 @@ class RealTimeViewer:
         return MiktosHTTPHandler
 
     async def start(self) -> bool:
-        """Start the real-time viewer"""
+        """Start the real-time viewer with improved error handling"""
         try:
+            self.logger.info(f"Starting real-time viewer on ports HTTP:{self.port}, WS:{self.ws_port}")
+            
+            # Check if ports are available before starting
+            if hasattr(self, 'port_manager'):
+                http_available = self.port_manager.is_port_available(self.port)
+                ws_available = self.port_manager.is_port_available(self.ws_port)
+                
+                if not http_available:
+                    self.logger.warning(f"HTTP port {self.port} appears to be in use")
+                    port_info = self.port_manager.get_port_info(self.port)
+                    if port_info:
+                        self.logger.info(f"Port {self.port} used by: {port_info}")
+                
+                if not ws_available:
+                    self.logger.warning(f"WebSocket port {self.ws_port} appears to be in use")
+                    port_info = self.port_manager.get_port_info(self.ws_port)
+                    if port_info:
+                        self.logger.info(f"Port {self.ws_port} used by: {port_info}")
+            
             # Initialize renderer
             await self.webgl_renderer.initialize()
             
@@ -132,25 +166,60 @@ class RealTimeViewer:
             # Start WebSocket server for client communication
             await self._start_websocket_server()
             
+            # Verify both servers started successfully
+            if not (hasattr(self, 'websocket_server') and self.websocket_server):
+                raise RuntimeError("Failed to start WebSocket server")
+            
             # Start update loop
             self.is_running = True
             asyncio.create_task(self._update_loop())
             
             self.viewer_state.is_active = True
-            self.logger.info(f"Real-time viewer started on port {self.port}")
+            self.logger.info(f"Real-time viewer started successfully")
+            self.logger.info(f"Access URLs: HTTP=http://localhost:{self.port}, WebSocket=ws://localhost:{self.ws_port}")
             return True
             
         except Exception as e:
             self.logger.error(f"Failed to start real-time viewer: {e}")
+            # Attempt cleanup on failure
+            await self.stop()
             return False
 
     async def _start_http_server(self):
-        """Start HTTP server for serving web interface"""
+        """Start HTTP server for serving web interface with retry logic"""
         def run_http_server():
-            handler = self._create_http_handler()
-            with socketserver.TCPServer(("", self.port), handler) as httpd:
-                self.logger.info(f"HTTP server serving on http://localhost:{self.port}")
-                httpd.serve_forever()
+            max_retries = 3
+            retry_count = 0
+            
+            while retry_count < max_retries:
+                try:
+                    handler = self._create_http_handler()
+                    with socketserver.TCPServer(("", self.port), handler) as httpd:
+                        httpd.allow_reuse_address = True  # Enable SO_REUSEADDR
+                        self.http_server = httpd
+                        self.logger.info(f"HTTP server serving on http://localhost:{self.port}")
+                        httpd.serve_forever()
+                        break
+                except OSError as e:
+                    if "Address already in use" in str(e):
+                        retry_count += 1
+                        self.logger.warning(f"Port {self.port} in use, attempt {retry_count}/{max_retries}")
+                        
+                        if retry_count < max_retries:
+                            # Try to find a new port
+                            try:
+                                old_port = self.port
+                                self.port = self.port_manager.find_available_port(self.port + 1)
+                                self.logger.info(f"Switched from port {old_port} to {self.port}")
+                            except RuntimeError:
+                                self.logger.error("No available ports found for HTTP server")
+                                break
+                        else:
+                            self.logger.error(f"Failed to start HTTP server after {max_retries} attempts")
+                            break
+                    else:
+                        self.logger.error(f"HTTP server error: {e}")
+                        break
         
         # Start HTTP server in a separate thread
         http_thread = threading.Thread(target=run_http_server, daemon=True)
@@ -158,7 +227,7 @@ class RealTimeViewer:
         self.logger.info(f"HTTP server thread started on port {self.port}")
 
     async def _start_websocket_server(self):
-        """Start WebSocket server for real-time communication"""
+        """Start WebSocket server for real-time communication with retry logic"""
         if websockets is None:
             self.logger.error("websockets package not available")
             return
@@ -188,10 +257,38 @@ class RealTimeViewer:
                 self.connected_clients.discard(websocket)
                 self.logger.info(f"Client disconnected: {websocket.remote_address}")
 
-        self.websocket_server = await websockets.serve(
-            handle_client, "localhost", self.ws_port
-        )
-        self.logger.info(f"WebSocket server started on ws://localhost:{self.ws_port}")
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                self.websocket_server = await websockets.serve(
+                    handle_client, "localhost", self.ws_port,
+                    reuse_port=True  # Allow port reuse
+                )
+                self.logger.info(f"WebSocket server started on ws://localhost:{self.ws_port}")
+                break
+                
+            except OSError as e:
+                if "Address already in use" in str(e):
+                    retry_count += 1
+                    self.logger.warning(f"WebSocket port {self.ws_port} in use, attempt {retry_count}/{max_retries}")
+                    
+                    if retry_count < max_retries:
+                        # Try to find a new port
+                        try:
+                            old_port = self.ws_port
+                            self.ws_port = self.port_manager.find_available_port(self.ws_port + 1)
+                            self.logger.info(f"Switched WebSocket from port {old_port} to {self.ws_port}")
+                        except RuntimeError:
+                            self.logger.error("No available ports found for WebSocket server")
+                            break
+                    else:
+                        self.logger.error(f"Failed to start WebSocket server after {max_retries} attempts")
+                        break
+                else:
+                    self.logger.error(f"WebSocket server error: {e}")
+                    break
 
     async def _send_scene_state(self, websocket):
         """Send current scene state to client"""
@@ -328,26 +425,95 @@ class RealTimeViewer:
         })
 
     async def stop(self):
-        """Stop the real-time viewer"""
+        """Stop the real-time viewer with proper cleanup"""
         self.is_running = False
         self.viewer_state.is_active = False
         
+        self.logger.info("Stopping real-time viewer...")
+        
         # Close WebSocket server
         if self.websocket_server:
-            self.websocket_server.close()
-            await self.websocket_server.wait_closed()
+            try:
+                self.websocket_server.close()
+                await self.websocket_server.wait_closed()
+                self.logger.info("WebSocket server stopped")
+            except Exception as e:
+                self.logger.error(f"Error stopping WebSocket server: {e}")
         
-        # Disconnect all clients
+        # Disconnect all clients gracefully
         for client in list(self.connected_clients):
-            await client.close()
+            try:
+                await client.close()
+            except Exception as e:
+                self.logger.debug(f"Error closing client connection: {e}")
         self.connected_clients.clear()
         
-        # Stop components
-        await self.scene_sync.stop_sync()
-        await self.viewport_manager.stop()
-        await self.webgl_renderer.cleanup()
+        # Stop HTTP server
+        if hasattr(self, 'http_server') and self.http_server:
+            try:
+                self.http_server.shutdown()
+                self.logger.info("HTTP server stopped")
+            except Exception as e:
+                self.logger.error(f"Error stopping HTTP server: {e}")
         
-        self.logger.info("Real-time viewer stopped")
+        # Stop components
+        try:
+            await self.scene_sync.stop_sync()
+            await self.viewport_manager.stop()
+            await self.webgl_renderer.cleanup()
+        except Exception as e:
+            self.logger.error(f"Error stopping components: {e}")
+        
+        # Give a moment for cleanup
+        await asyncio.sleep(1.0)
+        
+        # Release allocated ports
+        if hasattr(self, 'port_manager'):
+            self.port_manager.release_port_pair(self.port, self.ws_port)
+        
+        self.logger.info("Real-time viewer stopped successfully")
+
+    def get_port_info(self) -> Dict[str, Any]:
+        """Get current port allocation information"""
+        return {
+            "http_port": self.port,
+            "websocket_port": self.ws_port,
+            "http_url": f"http://localhost:{self.port}",
+            "websocket_url": f"ws://localhost:{self.ws_port}",
+            "ports_available": {
+                "http": self.port_manager.is_port_available(self.port) if hasattr(self, 'port_manager') else False,
+                "websocket": self.port_manager.is_port_available(self.ws_port) if hasattr(self, 'port_manager') else False
+            }
+        }
+
+    async def restart_with_new_ports(self) -> bool:
+        """Restart the viewer with new port allocation"""
+        try:
+            self.logger.info("Restarting viewer with new ports...")
+            
+            # Stop current instance
+            await self.stop()
+            
+            # Wait for ports to be released
+            await asyncio.sleep(2.0)
+            
+            # Allocate new ports
+            if hasattr(self, 'port_manager'):
+                try:
+                    preferred_http = self.config.get('port', 8080)
+                    preferred_ws = self.config.get('websocket', {}).get('port', self.config.get('ws_port', 8081))
+                    self.port, self.ws_port = self.port_manager.allocate_port_pair(preferred_http, preferred_ws)
+                    self.logger.info(f"Allocated new ports: HTTP={self.port}, WebSocket={self.ws_port}")
+                except RuntimeError as e:
+                    self.logger.error(f"Failed to allocate new ports: {e}")
+                    return False
+            
+            # Restart
+            return await self.start()
+            
+        except Exception as e:
+            self.logger.error(f"Error during restart: {e}")
+            return False
 
     async def add_object(self, object_data: Dict[str, Any]):
         """Add an object to the scene"""

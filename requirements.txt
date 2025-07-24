@@ -12,6 +12,10 @@ torch>=1.12.0
 sentence-transformers>=2.2.0
 nltk>=3.7
 
+# spaCy Language Models (install after spacy)
+# Run: python -m spacy download en_core_web_sm
+# Note: en_core_web_sm model is required for NLP processing
+
 # LLM Integration (Priority 2 Enhancement)
 openai>=1.0.0
 anthropic>=0.3.0
