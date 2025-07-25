@@ -25,6 +25,7 @@ except ImportError:
 from .scene_sync import SceneSync  # type: ignore
 from .viewport_manager import ViewportManager  # type: ignore
 from .webgl_renderer import WebGLRenderer  # type: ignore
+from .port_manager import PortManager  # type: ignore
 
 
 @dataclass
@@ -56,14 +57,30 @@ class RealTimeViewer:
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.port = config.get('port', 8080)
-        self.ws_port = config.get('ws_port', 8081)  # Separate WebSocket port
+        
+        # Setup logging first
+        self.logger = logging.getLogger('RealTimeViewer')
+        
+        # Initialize port manager for dynamic port allocation
+        self.port_manager = PortManager(self.logger)
+        
+        # Get preferred ports from config
+        preferred_http = config.get('port', 8080)
+        preferred_ws = config.get('ws_port', 8081)
+        
+        # Allocate available ports
+        try:
+            self.port, self.ws_port = self.port_manager.allocate_port_pair(preferred_http, preferred_ws)
+            self.logger.info(f"Allocated ports: HTTP={self.port}, WebSocket={self.ws_port}")
+        except RuntimeError as e:
+            self.logger.error(f"Failed to allocate ports: {e}")
+            # Fallback to original behavior
+            self.port = preferred_http
+            self.ws_port = preferred_ws
+            
         self.resolution = config.get('resolution', [1920, 1080])
         self.fps_target = config.get('fps_target', 60)
         self.quality = config.get('quality', 'high')
-        
-        # Setup logging
-        self.logger = logging.getLogger('RealTimeViewer')
         
         # Initialize components
         self.scene_sync = SceneSync(config.get('sync', {}))
@@ -161,7 +178,7 @@ class RealTimeViewer:
             self.logger.error("websockets package not available")
             return
 
-        async def handle_client(websocket, path):
+        async def handle_client(websocket):
             """Handle WebSocket client connections"""
             self.connected_clients.add(websocket)
             self.logger.info(f"Client connected: {websocket.remote_address}")

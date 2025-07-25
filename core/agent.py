@@ -16,6 +16,7 @@ from .nlp_processor import NLPProcessor  # type: ignore
 from .command_parser import CommandParser  # type: ignore
 from .safety_manager import SafetyManager  # type: ignore
 from .learning_engine import LearningEngine  # type: ignore
+from .llm_integration import LLMIntegration  # type: ignore
 from agent.blender_bridge import BlenderBridge  # type: ignore
 from skills.skill_manager import SkillManager  # type: ignore
 
@@ -62,6 +63,9 @@ class MiktosAgent:
         self.command_parser = CommandParser(agent_config.get('parser', {}))
         self.safety_manager = SafetyManager(agent_config.get('safety', {}))
         self.learning_engine = LearningEngine(agent_config.get('learning', {}))
+        
+        # Initialize LLM integration (Priority 2 Enhancement)
+        self.llm_integration = LLMIntegration(agent_config)
         
         # Initialize integration components
         self.blender_bridge = BlenderBridge(config.get('blender', {}))
@@ -112,7 +116,7 @@ class MiktosAgent:
     
     async def execute_command(self, command_text: str, context: Optional[Dict[str, Any]] = None) -> ExecutionResult:
         """
-        Execute a natural language command
+        Execute a natural language command with enhanced LLM intelligence
         
         Args:
             command_text: Natural language command from user
@@ -132,13 +136,25 @@ class MiktosAgent:
         )
         
         try:
-            # Step 1: Natural Language Processing
+            # Step 1: Enhanced Natural Language Processing with LLM
             self.logger.info(f"Processing command: {command_text}")
+            
+            # Traditional NLP processing
             nlp_result = await self.nlp_processor.process(command_text, context)
+            
+            # Enhanced LLM understanding (Priority 2 Enhancement)
+            enhanced_understanding = await self.llm_integration.enhance_command_understanding(
+                command_text, 
+                context or {}, 
+                self.session_id or "default"
+            )
+            
+            # Merge traditional NLP with LLM insights
+            merged_result = self._merge_nlp_results(nlp_result, enhanced_understanding)
             
             # Step 2: Command Parsing and Intent Recognition  
             # Convert between module types by passing through dict representation
-            parsed_command = await self.command_parser.parse(nlp_result)  # type: ignore
+            parsed_command = await self.command_parser.parse(merged_result)  # type: ignore
             
             # Step 3: Safety Validation
             # Ensure compatibility between command parser and safety manager types
@@ -261,6 +277,102 @@ class MiktosAgent:
                     skill_counts[skill] = skill_counts.get(skill, 0) + 1
         
         return sorted(skill_counts.keys(), key=lambda x: skill_counts[x], reverse=True)[:10]
+    
+    def _merge_nlp_results(self, nlp_result, enhanced_understanding: Dict[str, Any]):
+        """
+        Merge traditional NLP results with LLM enhanced understanding
+        """
+        # Create a copy of the original NLP result
+        merged = nlp_result.__dict__.copy() if hasattr(nlp_result, '__dict__') else {}
+        
+        # Enhance with LLM insights
+        if enhanced_understanding.get('confidence', 0) > merged.get('confidence', 0):
+            merged['intent'] = enhanced_understanding.get('enhanced_intent', merged.get('intent', 'unknown'))
+            merged['confidence'] = enhanced_understanding.get('confidence', merged.get('confidence', 0.5))
+        
+        # Merge entities and parameters
+        if 'parameters' in enhanced_understanding:
+            merged['entities'] = merged.get('entities', {})
+            merged['entities'].update(enhanced_understanding['parameters'])
+        
+        # Add LLM suggestions
+        merged['suggestions'] = enhanced_understanding.get('suggestions', [])
+        merged['llm_metadata'] = enhanced_understanding.get('metadata', {})
+        
+        # Return an NLPResult-like object
+        from .nlp_processor import NLPResult
+        return NLPResult(
+            intent=merged.get('intent', 'unknown'),
+            entities=merged.get('entities', {}),
+            confidence=merged.get('confidence', 0.5),
+            context=merged.get('context', {}),
+            processed_text=merged.get('processed_text', ''),
+            suggestions=merged.get('suggestions', []),
+            original_text=merged.get('original_text', '')
+        )
+    
+    async def generate_workflow(self, task_description: str) -> Dict[str, Any]:
+        """
+        Generate an intelligent workflow for complex tasks using LLM
+        """
+        try:
+            available_skills = await self.skill_manager.get_available_skills()
+            
+            # Convert skill dicts to skill names for LLM
+            skill_names = []
+            if isinstance(available_skills, list):
+                for skill in available_skills:
+                    if isinstance(skill, dict):
+                        skill_names.append(skill.get('name', str(skill)))
+                    else:
+                        skill_names.append(str(skill))
+            
+            # Get basic scene state
+            scene_state = {"objects": [], "materials": [], "lights": []}
+            
+            workflow = await self.llm_integration.generate_workflow(
+                task_description,
+                skill_names,
+                scene_state,
+                self.session_id or "default"
+            )
+            
+            self.logger.info(f"Generated workflow for: {task_description}")
+            return workflow
+            
+        except Exception as e:
+            self.logger.error(f"Workflow generation failed: {e}")
+            return {
+                'steps': [{'description': f'Complete task: {task_description}'}],
+                'estimated_total_time': 60,
+                'complexity': 'unknown'
+            }
+    
+    async def get_intelligent_suggestions(self, partial_command: str) -> List[str]:
+        """
+        Get intelligent command suggestions using both traditional NLP and LLM
+        """
+        try:
+            # Get traditional suggestions
+            basic_suggestions = await self.nlp_processor.get_suggestions(partial_command)
+            
+            # Get LLM-enhanced suggestions with basic context
+            context = {"session_id": self.session_id, "recent_commands": len(self.command_history)}
+            enhanced_understanding = await self.llm_integration.enhance_command_understanding(
+                partial_command,
+                context,
+                self.session_id or "default"
+            )
+            
+            llm_suggestions = enhanced_understanding.get('suggestions', [])
+            
+            # Combine and deduplicate
+            all_suggestions = list(set(basic_suggestions + llm_suggestions))
+            return all_suggestions[:10]  # Limit to top 10
+            
+        except Exception as e:
+            self.logger.error(f"Suggestion generation failed: {e}")
+            return await self.nlp_processor.get_suggestions(partial_command)
 
 
 # Convenience functions for common operations

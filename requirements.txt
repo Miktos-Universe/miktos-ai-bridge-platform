@@ -12,6 +12,10 @@ torch>=1.12.0
 sentence-transformers>=2.2.0
 nltk>=3.7
 
+# spaCy Models (install after spacy installation)
+# Run: python -m spacy download en_core_web_sm
+# This downloads the English language model for spaCy NLP processing
+
 # Machine Learning & AI
 scikit-learn>=1.1.0
 numpy>=1.21.0
