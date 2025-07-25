@@ -1,0 +1,285 @@
+agent:
+  learning:
+    community_data: false
+    learning_rate: 0.1
+    optimize_skills: true
+    performance_history_length: 100
+    track_performance: true
+  llm:
+    anthropic:
+      api_key: null
+      enabled: false
+      model: claude-3-sonnet-20240229
+    cost_limit_usd: 10.0
+    daily_token_limit: 100000
+    enabled: true
+    local:
+      enabled: false
+      endpoint: http://localhost:11434
+      model_path: null
+    max_history: 20
+    max_tokens: 1000
+    openai:
+      api_key: null
+      enabled: true
+      model: gpt-3.5-turbo
+    provider: openai
+    temperature: 0.7
+  nlp:
+    cache_embeddings: true
+    context_window: 5
+    fallback_enabled: true
+    model: sentence-transformers/all-MiniLM-L6-v2
+  parser:
+    intent_confidence_threshold: 0.6
+    max_complexity: 0.8
+    parameter_validation: true
+    safety_checks: true
+  safety:
+    backup_before_major_changes: true
+    destructive_operations_require_confirmation: true
+    max_operations_per_command: 10
+    rollback_enabled: true
+    validation_level: normal
+blender:
+  auto_save: true
+  backup_interval: 300
+  connection_pooling: true
+  cpu_cores: null
+  gui_mode: true
+  max_backups: 10
+  memory_limit_mb: 2048
+  operation_timeout: 60.0
+  path: /Applications/Blender.app
+  paths:
+    linux:
+    - /usr/bin/blender
+    - /usr/local/bin/blender
+    - /opt/blender/blender
+    - /snap/bin/blender
+    - /home/$(USER)/.local/bin/blender
+    - /flatpak/app/org.blender.Blender/current/active/files/bin/blender
+    macos:
+    - /Applications/Blender.app
+    - /Applications/Blender 4.3.app
+    - /Applications/Blender 4.2.app
+    - /Applications/Blender 4.1.app
+    - /Applications/Blender 4.0.app
+    - /Applications/Blender 3.6.app
+    - /Users/$(USER)/Applications/Blender.app
+    - /opt/homebrew/bin/blender
+    windows:
+    - C:\Program Files\Blender Foundation\Blender 4.3\blender.exe
+    - C:\Program Files\Blender Foundation\Blender 4.2\blender.exe
+    - C:\Program Files\Blender Foundation\Blender 4.1\blender.exe
+    - C:\Program Files\Blender Foundation\Blender 4.0\blender.exe
+    - C:\Program Files\Blender Foundation\Blender 3.6\blender.exe
+    - C:\Users\%USERNAME%\AppData\Local\Programs\Blender Foundation\Blender 4.3\blender.exe
+    - C:\Program Files (x86)\Blender Foundation\Blender 4.3\blender.exe
+  python_path: null
+  socket_port: 8089
+  startup_blend: templates/default_scene.blend
+  startup_timeout: 30.0
+caching:
+  assets:
+    cache_models: true
+    cache_textures: true
+    enabled: true
+    max_size: 1GB
+    ttl: 86400
+  backend: memory
+  disk_cache_dir: cache/
+  enabled: true
+  eviction_policy: lru_with_frequency
+  llm_responses:
+    compression: true
+    enabled: true
+    max_size: 100MB
+    semantic_similarity_threshold: 0.95
+    ttl: 7200
+  metrics:
+    log_cache_operations: false
+    track_hit_rate: true
+    track_memory_usage: true
+  optimization:
+    auto_cleanup: true
+    background_refresh: true
+    cleanup_interval: 300
+    preload_popular: true
+  redis_url: redis://localhost:6379
+  skill_results:
+    ttl: 1800
+  statistics: true
+  warming:
+    enabled: true
+    preload_popular: true
+    warm_on_startup: true
+  workflow_results:
+    cache_intermediate_steps: true
+    enabled: true
+    max_size: 500MB
+    ttl: 3600
+cloud:
+  api_base_url: https://api.miktos.ai
+  cdn_base_url: https://cdn.miktos.ai
+  enabled: false
+  refresh_token: null
+  sync_preferences: false
+  sync_projects: false
+  sync_skills: false
+  user_token: null
+development:
+  debug_ui: true
+  enable_profiling: false
+  generate_test_reports: true
+  hot_reload: true
+  mock_blender: false
+  test_data_directory: tests/data/
+extensions:
+  auto_load: false
+  directory: extensions/
+  enabled: []
+logging:
+  async_logging: true
+  backup_count: 10
+  buffer_size: 1000
+  components:
+    agent: INFO
+    blender_bridge: DEBUG
+    nlp_processor: DEBUG
+    skills_manager: INFO
+    viewer: INFO
+  date_format: '%Y-%m-%d %H:%M:%S'
+  file: logs/miktos.log
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  level: INFO
+  max_size_mb: 50
+monitoring:
+  alert_email: null
+  alert_on_errors: true
+  alert_on_performance_degradation: true
+  auto_optimization: true
+  enabled: true
+  metrics_port: 9090
+  real_time_updates: true
+  targets:
+    max_response_time: 200
+    max_workflow_time: 60
+    min_cache_hit_rate: 0.8
+    min_fps: 30
+  track_cache_performance: true
+  track_command_latency: true
+  track_memory_usage: true
+  track_skill_performance: true
+  track_viewer_fps: true
+  track_websocket_activity: true
+  update_interval: 1
+performance:
+  async_processing: true
+  profiling_enabled: true
+platform:
+  debug: false
+  environment: development
+  name: Miktos AI Bridge
+  version: 1.0.0
+production:
+  auto_updates: true
+  cpu_priority: normal
+  error_reporting: true
+  optimize_memory: true
+  preload_skills: true
+  telemetry: false
+security:
+  allow_external_connections: false
+  allow_system_commands: false
+  api_key: null
+  cors_origins:
+  - http://localhost:3000
+  - http://localhost:8080
+  require_api_key: false
+  restricted_directories: []
+skills:
+  auto_load_custom_skills: true
+  cache_skills: true
+  custom_skills_directory: custom_skills/
+  max_skills_per_command: 3
+  optimize_frequently_used: true
+  parallel_execution: false
+  skill_complexity_weighting: true
+  skill_timeout: 30.0
+  track_usage_statistics: true
+templates:
+  animation:
+    blender:
+      memory_limit_mb: 4096
+    viewer:
+      enable_motion_blur: true
+      fps_target: 24
+  modeling:
+    skills:
+      max_skills_per_command: 5
+      prefer_simple_operations: true
+    viewer:
+      enable_wireframe_overlay: true
+      quality: high
+  rendering:
+    blender:
+      cpu_cores: -1
+    viewer:
+      enable_gpu_acceleration: true
+      quality: ultra
+user:
+  auto_save_frequency: 300
+  confirm_destructive_operations: true
+  default_shading_mode: material
+  enable_skill_suggestions: true
+  language: en
+  preferred_skill_complexity: medium
+  show_advanced_options: false
+  show_axis: true
+  show_grid: true
+  theme: dark
+viewer:
+  anti_aliasing: MSAA_4x
+  auto_start: true
+  client_timeout: 300
+  default_camera_position:
+  - 5
+  - 5
+  - 5
+  default_camera_target:
+  - 0
+  - 0
+  - 0
+  default_viewport_mode: perspective
+  enable_reflections: true
+  enable_shadows: true
+  enabled: true
+  fps_target: 60
+  frame_rate_limit: 30
+  host: localhost
+  max_clients: 10
+  max_polygons: 1000000
+  port: 8082
+  progressive_loading:
+    chunk_size: 1000
+    enabled: true
+    show_progress: true
+    update_interval: 500
+  quality: balanced
+  resolution:
+  - 1920
+  - 1080
+  texture_resolution_limit: 2048
+  websocket:
+    close_timeout: 5
+    compression: true
+    conflict_resolution: latest_wins
+    enable_collaboration: true
+    enabled: true
+    max_concurrent_users: 10
+    max_message_size: 1048576
+    ping_interval: 20
+    ping_timeout: 10
+    port: 8083
+    sync_interval: 100

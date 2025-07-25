@@ -151,6 +151,41 @@ class SafetyManager:
         else:
             return {}
     
+    def _get_param_type(self, param: ParsedParameter) -> str:
+        """Get parameter type with fallback for attribute compatibility"""
+        # Handle both data_type (legacy) and param_type (current) attributes
+        if hasattr(param, 'param_type'):
+            return param.param_type
+        elif hasattr(param, 'data_type') and param.data_type is not None:
+            return param.data_type
+        else:
+            # Fallback: try to infer from value type
+            if isinstance(param.value, (int, float)):
+                return 'numeric'
+            elif isinstance(param.value, str):
+                return 'string'
+            elif isinstance(param.value, bool):
+                return 'boolean'
+            else:
+                return 'unknown'
+    
+    def _safe_get_param_value(self, param: ParsedParameter) -> Any:
+        """Safely get parameter value with validation"""
+        try:
+            return param.value if hasattr(param, 'value') else None
+        except Exception as e:
+            self.logger.warning(f"Error accessing parameter value: {e}")
+            return None
+    
+    def _validate_parameter_structure(self, param: ParsedParameter) -> bool:
+        """Validate that parameter has required attributes"""
+        required_attrs = ['name', 'value']
+        for attr in required_attrs:
+            if not hasattr(param, attr):
+                self.logger.warning(f"Parameter missing required attribute: {attr}")
+                return False
+        return True
+    
     def _get_primary_intent(self, parsed_command: ParsedCommand) -> str:
         """Get primary intent with fallback"""
         if parsed_command.primary_intent:
@@ -448,31 +483,45 @@ class SafetyManager:
         """Validate parameter ranges against safety limits"""
         violations = []
         
-        for param_name, param in self._get_parameters_dict(parsed_command).items():
-            if param.data_type == 'numeric':
-                # Check if parameter has defined limits
-                for limit_name, limits in self.parameter_limits.items():
-                    if limit_name in param_name.lower():
-                        value = param.value
-                        
-                        if value < limits['min'] or value > limits['max']:
-                            violations.append(SafetyViolation(
-                                rule_name=rule.name,
-                                severity="error",
-                                message=f"Parameter {param_name} value {value} outside safe range [{limits['min']}, {limits['max']}]",
-                                parameter=param_name,
-                                suggested_fix=f"Use value between {limits['min']} and {limits['max']}",
-                                auto_fixable=True
-                            ))
-                        elif value > limits.get('warning_threshold', limits['max']):
-                            violations.append(SafetyViolation(
-                                rule_name=rule.name,
-                                severity="warning",
-                                message=f"Parameter {param_name} value {value} exceeds recommended threshold {limits['warning_threshold']}",
-                                parameter=param_name,
-                                suggested_fix=f"Consider using value below {limits['warning_threshold']}",
-                                auto_fixable=True
-                            ))
+        try:
+            for param_name, param in self._get_parameters_dict(parsed_command).items():
+                # Validate parameter structure first
+                if not self._validate_parameter_structure(param):
+                    continue
+                    
+                if self._get_param_type(param) == 'numeric':
+                    # Check if parameter has defined limits
+                    for limit_name, limits in self.parameter_limits.items():
+                        if limit_name in param_name.lower():
+                            value = self._safe_get_param_value(param)
+                            
+                            if value is not None:
+                                if value < limits['min'] or value > limits['max']:
+                                    violations.append(SafetyViolation(
+                                        rule_name=rule.name,
+                                        severity="error",
+                                        message=f"Parameter {param_name} value {value} outside safe range [{limits['min']}, {limits['max']}]",
+                                        parameter=param_name,
+                                        suggested_fix=f"Use value between {limits['min']} and {limits['max']}",
+                                        auto_fixable=True
+                                    ))
+                                elif value > limits.get('warning_threshold', limits['max']):
+                                    violations.append(SafetyViolation(
+                                        rule_name=rule.name,
+                                        severity="warning",
+                                        message=f"Parameter {param_name} value {value} exceeds recommended threshold {limits['warning_threshold']}",
+                                        parameter=param_name,
+                                        suggested_fix=f"Consider using value below {limits['warning_threshold']}",
+                                        auto_fixable=True
+                                    ))
+        except Exception as e:
+            self.logger.error(f"Error in parameter range validation: {e}")
+            violations.append(SafetyViolation(
+                rule_name=rule.name,
+                severity="error",
+                message=f"Parameter validation failed: {str(e)}",
+                auto_fixable=False
+            ))
         
         return violations
     
@@ -480,20 +529,35 @@ class SafetyManager:
         """Validate object creation count"""
         violations = []
         
-        max_objects = (rule.parameters or {}).get('max_objects_per_operation', 100)
-        
-        # Check for array/duplicate operations
-        for param_name, param in self._get_parameters_dict(parsed_command).items():
-            if 'count' in param_name.lower() or 'array' in param_name.lower():
-                if param.data_type == 'numeric' and param.value > max_objects:
-                    violations.append(SafetyViolation(
-                        rule_name=rule.name,
-                        severity="error",
-                        message=f"Object count {param.value} exceeds maximum {max_objects}",
-                        parameter=param_name,
-                        suggested_fix=f"Reduce count to {max_objects} or less",
-                        auto_fixable=True
-                    ))
+        try:
+            max_objects = (rule.parameters or {}).get('max_objects_per_operation', 100)
+            
+            # Check for array/duplicate operations
+            for param_name, param in self._get_parameters_dict(parsed_command).items():
+                # Validate parameter structure first
+                if not self._validate_parameter_structure(param):
+                    continue
+                    
+                if 'count' in param_name.lower() or 'array' in param_name.lower():
+                    if self._get_param_type(param) == 'numeric':
+                        value = self._safe_get_param_value(param)
+                        if value is not None and value > max_objects:
+                            violations.append(SafetyViolation(
+                                rule_name=rule.name,
+                                severity="error",
+                                message=f"Object count {value} exceeds maximum {max_objects}",
+                                parameter=param_name,
+                                suggested_fix=f"Reduce count to {max_objects} or less",
+                                auto_fixable=True
+                            ))
+        except Exception as e:
+            self.logger.error(f"Error in object count validation: {e}")
+            violations.append(SafetyViolation(
+                rule_name=rule.name,
+                severity="error",
+                message=f"Object count validation failed: {str(e)}",
+                auto_fixable=False
+            ))
         
         return violations
     
@@ -519,19 +583,33 @@ class SafetyManager:
         """Validate subdivision levels"""
         violations = []
         
-        max_subdivisions = (rule.parameters or {}).get('max_subdivisions', 6)
-        
-        for param_name, param in self._get_parameters_dict(parsed_command).items():
-            if 'subdivision' in param_name.lower() and param.data_type == 'numeric':
-                if param.value > max_subdivisions:
-                    violations.append(SafetyViolation(
-                        rule_name=rule.name,
-                        severity="error",
-                        message=f"Subdivision level {param.value} exceeds maximum {max_subdivisions}",
-                        parameter=param_name,
-                        suggested_fix=f"Use {max_subdivisions} or fewer subdivisions",
-                        auto_fixable=True
-                    ))
+        try:
+            max_subdivisions = (rule.parameters or {}).get('max_subdivisions', 6)
+            
+            for param_name, param in self._get_parameters_dict(parsed_command).items():
+                # Validate parameter structure first
+                if not self._validate_parameter_structure(param):
+                    continue
+                    
+                if 'subdivision' in param_name.lower() and self._get_param_type(param) == 'numeric':
+                    value = self._safe_get_param_value(param)
+                    if value is not None and value > max_subdivisions:
+                        violations.append(SafetyViolation(
+                            rule_name=rule.name,
+                            severity="error",
+                            message=f"Subdivision level {value} exceeds maximum {max_subdivisions}",
+                            parameter=param_name,
+                            suggested_fix=f"Use {max_subdivisions} or fewer subdivisions",
+                            auto_fixable=True
+                        ))
+        except Exception as e:
+            self.logger.error(f"Error in subdivision validation: {e}")
+            violations.append(SafetyViolation(
+                rule_name=rule.name,
+                severity="error",
+                message=f"Subdivision validation failed: {str(e)}",
+                auto_fixable=False
+            ))
         
         return violations
     
@@ -560,20 +638,34 @@ class SafetyManager:
         """Validate animation frame counts"""
         violations = []
         
-        max_frames = (rule.parameters or {}).get('max_frames', 10000)
-        
-        # Check for frame-related parameters
-        for param_name, param in self._get_parameters_dict(parsed_command).items():
-            if 'frame' in param_name.lower() and param.data_type == 'numeric':
-                if param.value > max_frames:
-                    violations.append(SafetyViolation(
-                        rule_name=rule.name,
-                        severity="warning",
-                        message=f"Frame count {param.value} exceeds recommended maximum {max_frames}",
-                        parameter=param_name,
-                        suggested_fix=f"Consider using {max_frames} or fewer frames",
-                        auto_fixable=True
-                    ))
+        try:
+            max_frames = (rule.parameters or {}).get('max_frames', 10000)
+            
+            # Check for frame-related parameters
+            for param_name, param in self._get_parameters_dict(parsed_command).items():
+                # Validate parameter structure first
+                if not self._validate_parameter_structure(param):
+                    continue
+                    
+                if 'frame' in param_name.lower() and self._get_param_type(param) == 'numeric':
+                    value = self._safe_get_param_value(param)
+                    if value is not None and value > max_frames:
+                        violations.append(SafetyViolation(
+                            rule_name=rule.name,
+                            severity="warning",
+                            message=f"Frame count {value} exceeds recommended maximum {max_frames}",
+                            parameter=param_name,
+                            suggested_fix=f"Consider using {max_frames} or fewer frames",
+                            auto_fixable=True
+                        ))
+        except Exception as e:
+            self.logger.error(f"Error in animation frame validation: {e}")
+            violations.append(SafetyViolation(
+                rule_name=rule.name,
+                severity="error",
+                message=f"Animation frame validation failed: {str(e)}",
+                auto_fixable=False
+            ))
         
         return violations
     
@@ -608,22 +700,33 @@ class SafetyManager:
         """Calculate estimated resource impact score (0.0 to 1.0)"""
         impact = 0.0
         
-        # Base impact from complexity
-        impact += parsed_command.execution_complexity * 0.3
-        
-        # Impact from number of operations
-        impact += min(self._get_required_skills_count(parsed_command) / 10.0, 0.3)
-        
-        # Impact from specific parameters
-        for param_name, param in self._get_parameters_dict(parsed_command).items():
-            if param.data_type == 'numeric':
-                # High subdivision impact
-                if 'subdivision' in param_name.lower():
-                    impact += min(param.value / 10.0, 0.4)
-                
-                # Array/count impact
-                elif 'count' in param_name.lower() or 'array' in param_name.lower():
-                    impact += min(param.value / 100.0, 0.3)
+        try:
+            # Base impact from complexity
+            impact += parsed_command.execution_complexity * 0.3
+            
+            # Impact from number of operations
+            impact += min(self._get_required_skills_count(parsed_command) / 10.0, 0.3)
+            
+            # Impact from specific parameters
+            for param_name, param in self._get_parameters_dict(parsed_command).items():
+                # Validate parameter structure first
+                if not self._validate_parameter_structure(param):
+                    continue
+                    
+                if self._get_param_type(param) == 'numeric':
+                    value = self._safe_get_param_value(param)
+                    if value is not None:
+                        # High subdivision impact
+                        if 'subdivision' in param_name.lower():
+                            impact += min(value / 10.0, 0.4)
+                        
+                        # Array/count impact
+                        elif 'count' in param_name.lower() or 'array' in param_name.lower():
+                            impact += min(value / 100.0, 0.3)
+        except Exception as e:
+            self.logger.warning(f"Error calculating resource impact: {e}")
+            # Return a conservative high impact estimate
+            impact = 0.8
         
         return min(impact, 1.0)
     
@@ -631,19 +734,30 @@ class SafetyManager:
         """Generate automatic corrections for fixable violations"""
         corrections = {}
         
-        for violation in violations:
-            if violation.auto_fixable and violation.parameter:
-                param_dict = self._get_parameters_dict(parsed_command)
-                param = param_dict.get(violation.parameter)
-                if param:
-                    # Auto-correct parameter ranges
-                    if "outside safe range" in violation.message:
-                        for limit_name, limits in self.parameter_limits.items():
-                            if limit_name in violation.parameter.lower():
-                                # Clamp to safe range
-                                corrected_value = max(limits['min'], min(param.value, limits['max']))
-                                corrections[violation.parameter] = corrected_value
-                                break
+        try:
+            param_dict = self._get_parameters_dict(parsed_command)
+            
+            # Generate auto-corrections for violations
+            for violation in violations:
+                if violation.auto_fixable and violation.parameter:
+                    param = param_dict.get(violation.parameter)
+                    if param and self._validate_parameter_structure(param):
+                        try:
+                            # Auto-correct parameter ranges
+                            if "outside safe range" in violation.message:
+                                for limit_name, limits in self.parameter_limits.items():
+                                    if limit_name in violation.parameter.lower():
+                                        # Clamp to safe range
+                                        param_value = self._safe_get_param_value(param)
+                                        if param_value is not None:
+                                            corrected_value = max(limits['min'], min(param_value, limits['max']))
+                                            corrections[violation.parameter] = corrected_value
+                                        break
+                        except Exception as e:
+                            self.logger.warning(f"Error generating auto-correction for {violation.parameter}: {e}")
+                            continue
+        except Exception as e:
+            self.logger.error(f"Error in _generate_auto_corrections: {e}")
         
         return corrections
     

@@ -1,0 +1,108 @@
+{
+  "total_tests": 8,
+  "passed_tests": 7,
+  "failed_tests": 1,
+  "test_results": {
+    "core_integration": {
+      "status": "passed",
+      "duration": 2.511183023452759,
+      "details": {
+        "templates_loaded": 5,
+        "suggestions_generated": 2,
+        "llm_enhancement": "create"
+      },
+      "message": "Core components integrated successfully"
+    },
+    "nlp_pipeline": {
+      "status": "passed",
+      "duration": 1.9376599788665771,
+      "details": {
+        "total_commands": 5,
+        "processed_commands": 5,
+        "successful_parsing": 5,
+        "success_rate": 1.0
+      },
+      "message": "NLP pipeline 100.0% success rate"
+    },
+    "workflow_integration": {
+      "status": "passed",
+      "duration": 0.0003898143768310547,
+      "details": {
+        "templates_available": 5,
+        "recommendations_generated": 5,
+        "custom_template_created": true,
+        "analytics_available": true
+      },
+      "message": "Workflow integration successful"
+    },
+    "performance_integration": {
+      "status": "passed",
+      "duration": 0.6224470138549805,
+      "details": {
+        "commands_recorded": 5,
+        "monitoring_active": true,
+        "optimization_available": false,
+        "performance_targets_met": true
+      },
+      "message": "Performance integration successful"
+    },
+    "viewer_integration": {
+      "status": "passed",
+      "duration": 0.32195615768432617,
+      "details": {
+        "port_availability_check": true,
+        "port_allocation_success": true,
+        "conflict_resolution_working": true,
+        "port_info_available": true
+      },
+      "message": "Viewer integration successful"
+    },
+    "workflow_scenarios": {
+      "status": "passed",
+      "duration": 2.040724992752075,
+      "details": {
+        "scenario_1_object_creation": true,
+        "scenario_2_scene_setup": true,
+        "scenario_3_materials_lighting": true,
+        "scenario_4_workflow_chaining": true,
+        "scenarios_passed": 4,
+        "total_scenarios": 4,
+        "success_rate": 1.0
+      },
+      "message": "Complete workflows: 4/4 scenarios passed"
+    },
+    "error_handling": {
+      "status": "failed",
+      "duration": 1.9399917125701904,
+      "details": {
+        "invalid_command_handling": 0,
+        "safety_validation_success": 1,
+        "total_error_tests": 7,
+        "total_success": 1,
+        "error_handling_rate": 0.14285714285714285
+      },
+      "message": "Error handling: 1/7 tests passed"
+    },
+    "load_testing": {
+      "status": "passed",
+      "duration": 2.0216619968414307,
+      "details": {
+        "concurrent_success_rate": 1.0,
+        "sequential_success_rate": 1.0,
+        "avg_concurrent_time": 0.00010225176811218262,
+        "avg_sequential_time": 6.851553916931152e-05,
+        "performance_acceptable": true
+      },
+      "message": "Load testing: 8/8 commands processed successfully"
+    }
+  },
+  "performance_metrics": {
+    "total_test_duration": 11.454271078109741,
+    "average_response_time": 0.0,
+    "memory_efficiency": 41.8,
+    "cpu_efficiency": 67.3
+  },
+  "workflow_validations": {},
+  "integration_status": "good",
+  "success_rate": 0.875
+}
